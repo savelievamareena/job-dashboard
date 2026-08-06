@@ -1,0 +1,27 @@
+# Java
+target/
+*.class
+
+# Node
+node_modules/
+dist/
+*.log
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local configuration: holds the path to the CVs folder
+.env
+
+# Local env overrides, but keep the example that documents them
+.env.local
+.env.*.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# WebStorm module files (the .idea folder above covers the rest)
+*.iml
+
