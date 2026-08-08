@@ -1,0 +1,27 @@
+server:
+  port: 8765
+
+spring:
+  application:
+    name: job-dashboard
+  jackson:
+    default-property-inclusion: always
+
+dashboard:
+  # DASHBOARD_ROOT is the folder the parsing skills write into. It has no default on purpose:
+  # a personal path does not belong in a repository, and a wrong one would silently show an
+  # empty board instead of failing. Set it in .env (see .env.example) or in the environment.
+  roots:
+    - ${DASHBOARD_ROOT}/DailySearch
+    - ${DASHBOARD_ROOT}/PortalSearch
+  # The only file this app writes.
+  status-file: ${DASHBOARD_ROOT}/DailySearch/_status.json
+  tracks:
+    - frontend
+    - fullstack
+    - other-stacks
+    - unsorted
+
+logging:
+  level:
+    com.savelieva.jobdashboard: INFO
