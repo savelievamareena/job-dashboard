@@ -15,6 +15,8 @@ export type Vacancy = {
     applicants: string;
     gap: string;
     hasText: boolean;
+    /** Which CV to send. null while the tailoring has not reached this company. */
+    cv: "tailored" | "base" | null;
     status: string;
     note: string;
 };
@@ -25,7 +27,15 @@ export type VacanciesResponse = {
 };
 
 /** Columns the table can be sorted by. */
-export type SortKey = "date" | "company" | "title" | "track" | "easyApply" | "level" | "status";
+export type SortKey =
+    | "date"
+    | "company"
+    | "title"
+    | "track"
+    | "easyApply"
+    | "level"
+    | "cv"
+    | "status";
 
 export type Filters = {
     date: string;

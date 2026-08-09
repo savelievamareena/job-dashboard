@@ -20,6 +20,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "track", label: "Stack" },
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
+    { key: "cv", label: "CV" },
     { key: "status", label: "Status" },
 ];
 
@@ -32,6 +33,22 @@ const ApplyRoute = ({ easyApply }: { easyApply: boolean | null }) => {
         <span className="tag easy">Easy Apply</span>
     ) : (
         <span className="tag external">external site</span>
+    );
+};
+
+/**
+ * Which CV goes out. "tailored" sits in the company folder of the core it was built from, "core CV"
+ * is the base file sent unchanged, and nothing built yet is its own answer rather than either.
+ */
+const CvChoice = ({ cv }: { cv: Vacancy["cv"] }) => {
+    if (cv === null) {
+        return <span className="tag unknown">not built</span>;
+    }
+
+    return cv === "tailored" ? (
+        <span className="tag tailored">tailored</span>
+    ) : (
+        <span className="tag external">core CV</span>
     );
 };
 
@@ -87,6 +104,9 @@ export const VacancyTable = ({
                         <ApplyRoute easyApply={vacancy.easyApply} />
                     </td>
                     <td>{vacancy.level}</td>
+                    <td>
+                        <CvChoice cv={vacancy.cv} />
+                    </td>
                     <td>
                         <select
                             aria-label={`Status for ${vacancy.company}`}

@@ -84,6 +84,28 @@ are read. A missing Easy Apply flag shows as `?`, which is not the same as "exte
 The board reads these files on every request, so a fresh parsing run shows up on reload. Nothing
 is copied or imported, and no vacancy data lives in this repository.
 
+### Which CV to send
+
+The `CV` column answers what goes out for that company. It comes from the queue the tailoring
+appends to, one per core:
+
+```
+<root>/cv-tailored/Poland/<core>/review-queue.csv     company,url,pdf_path,built,verdict
+```
+
+A row whose `pdf_path` sits in a folder named after the company is a CV tailored for it, and shows
+as **tailored**; any other path under the core is the core CV sent unchanged, and shows as
+**core CV**. A company with no row yet reads **not built**, which is not the same as either answer.
+
+A track is answered from the core of the same name: a frontend posting is told about the Frontend
+queue only. The two cores are deliberately different documents, down to the job titles and the
+2022-2024 employer name, so a fullstack CV is no answer for a frontend posting. The tracks that
+name no core, `other-stacks` and `unsorted`, take whichever core knows the company.
+
+A row is matched to a posting by `url`, so two ads from the same agency answer separately: one can
+read **tailored** while the other reads **core CV**. Rows written before the queue carried a `url`
+are matched by company and answer for every posting of it, which is all they can honestly say.
+
 ## What it writes
 
 One file, `DailySearch/_status.json`, mapping a posting URL to its status and note:
@@ -112,7 +134,10 @@ cd backend && mvn test
 ```
 
 They cover the file reader against a temp folder (only selected rows returned, both cached record
-shapes, the title fallback chain, newest day first, missing folders), the status store (round trip,
+shapes, the title fallback chain, newest day first, missing folders), the review queue reader
+(tailored against core CV, two postings of one company answered separately, a row without a url
+answering company wide, a track answered from its own core only, a track without a core falling
+back, verdicts holding unquoted commas, missing folders), the status store (round trip,
 one entry not clobbering another, empty entries removed, a corrupt file not taking the app down),
 and the `.env` loader (parsing, lookup in a parent directory, not overriding a real environment
 variable, and the refusal to start on an unresolved `DASHBOARD_ROOT`).

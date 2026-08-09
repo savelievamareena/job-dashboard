@@ -4,6 +4,8 @@
     --muted: #8888;
     --easy-bg: #1a7f3722;
     --easy-line: #1a7f3788;
+    --cv-bg: #5b4bd622;
+    --cv-line: #5b4bd688;
     --error: #c0392b;
 }
 
@@ -121,6 +123,11 @@ a {
 .tag.easy {
     background: var(--easy-bg);
     border-color: var(--easy-line);
+}
+
+.tag.tailored {
+    background: var(--cv-bg);
+    border-color: var(--cv-line);
 }
 
 .tag.external,
