@@ -1,0 +1,152 @@
+/*
+ * Chart tokens. The eight slots are the validated categorical order, and the order itself is the
+ * colourblind-safety mechanism, not a preference: it clears the adjacent-pair separation gates in
+ * both modes (worst CVD dE 9.1 light / 8.4 dark against a >= 8 target). A ninth series is not a
+ * ninth hue - it folds into "other".
+ *
+ * The dark column is the same eight hues re-stepped for the dark surface, declared under both the
+ * OS media query and the data-theme scope so a future theme toggle wins either way.
+ */
+.viz {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted-ink: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --ring: rgba(11, 11, 11, 0.1);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --series-6: #008300;
+    --series-7: #4a3aa7;
+    --series-8: #e34948;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz {
+        color-scheme: dark;
+        --surface-1: #1a1a19;
+        --text-primary: #ffffff;
+        --text-secondary: #c3c2b7;
+        --muted-ink: #898781;
+        --gridline: #2c2c2a;
+        --baseline: #383835;
+        --ring: rgba(255, 255, 255, 0.1);
+        --series-1: #3987e5;
+        --series-2: #d95926;
+        --series-3: #199e70;
+        --series-4: #c98500;
+        --series-5: #d55181;
+        --series-6: #008300;
+        --series-7: #9085e9;
+        --series-8: #e66767;
+    }
+}
+
+:root[data-theme="dark"] .viz {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted-ink: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --ring: rgba(255, 255, 255, 0.1);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+}
+
+/* Sits above <main>, which brings its own padding, so it repeats the horizontal inset here. */
+nav.pages {
+    display: flex;
+    gap: 4px;
+    padding: 14px 20px 0;
+}
+
+nav.pages a {
+    padding: 5px 11px;
+    border-radius: 7px;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.6;
+}
+
+nav.pages a[aria-current="page"] {
+    background: #8882;
+    opacity: 1;
+}
+
+.banner {
+    margin: 0 0 14px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #8881;
+    font-size: 13px;
+}
+
+.charts {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    align-items: start;
+}
+
+.card {
+    background: var(--surface-1);
+    border: 1px solid var(--ring);
+    border-radius: 12px;
+    padding: 14px 16px 12px;
+    min-width: 0;
+}
+
+.card h2 {
+    font-size: 15px;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.caption {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.chart {
+    margin-top: 10px;
+}
+
+/* Recharts paints its own surface behind the tooltip; this keeps it on the chart surface. */
+.chart .recharts-tooltip-wrapper {
+    outline: none;
+}
+
+.chart .recharts-default-tooltip {
+    background: var(--surface-1) !important;
+    border-color: var(--ring) !important;
+    border-radius: 8px;
+}
+
+/*
+ * Recharts paints legend and tooltip labels in the series colour. Text wears text tokens: the
+ * coloured line marker beside the label is what carries identity, and on the light surface three
+ * of the eight hues sit below 3:1, so a label in its own hue is the least readable thing here.
+ */
+.chart .recharts-legend-item-text,
+.chart .recharts-tooltip-item {
+    color: var(--text-secondary) !important;
+}
+
+.chart .recharts-tooltip-item-value {
+    font-variant-numeric: tabular-nums;
+}
