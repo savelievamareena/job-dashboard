@@ -21,6 +21,13 @@ dashboard:
     - fullstack
     - other-stacks
     - unsorted
+  cv:
+    # Where the tailoring skill keeps <core>/review-queue.csv. A core answers the track of the
+    # same name, so Frontend is what a frontend posting is told about.
+    root: ${DASHBOARD_ROOT}/cv-tailored/Poland
+    cores:
+      - Frontend
+      - Fullstack
 
 logging:
   level:
