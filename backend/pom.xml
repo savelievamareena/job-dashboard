@@ -38,6 +38,18 @@
             <artifactId>commons-csv</artifactId>
             <version>${commons-csv.version}</version>
         </dependency>
+        <!-- Plain JDBC, deliberately not spring-boot-starter-data-jpa: JPA brings ddl-auto, which
+             would let Hibernate alter or drop the tables the loader owns, and the trend views have
+             no primary key for an entity to be mapped onto. This app only reads. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

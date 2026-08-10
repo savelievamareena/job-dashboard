@@ -6,6 +6,21 @@ spring:
     name: job-dashboard
   jackson:
     default-property-inclusion: always
+  datasource:
+    # Credentials come from .env or the environment, never from this file. The url and user have
+    # local defaults because they are not secrets; the password deliberately has none.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/jobdashboard}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:}
+    hikari:
+      # Do not probe the database while starting. The board reads files and owes the database
+      # nothing, so a stopped container must cost the statistics page and nothing else; the
+      # default would refuse to start the whole application.
+      initialization-fail-timeout: -1
+      # The default is 30s, which is how long the statistics page would sit on a spinner before
+      # admitting the container is down. The database is on localhost: if it is there at all, it
+      # answers in well under this.
+      connection-timeout: 4000
 
 dashboard:
   # DASHBOARD_ROOT is the folder the parsing skills write into. It has no default on purpose:

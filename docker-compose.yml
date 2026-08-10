@@ -1,0 +1,30 @@
+services:
+  db:
+    # Pinned: "postgres" alone follows latest, and 18 moved the data directory, which silently
+    # turns into a restart loop on the next image pull.
+    image: postgres:18
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: jobdashboard
+    volumes:
+      # 18+ wants a single mount here and puts the cluster in a version subfolder itself;
+      # mounting /var/lib/postgresql/data is the pre-18 layout and refuses to start.
+      - pgdata:/var/lib/postgresql
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jobdashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+#  adminer:
+#    image: adminer
+#    restart: always
+#    ports:
+#      - 8080:8080
+
+volumes:
+  pgdata:
