@@ -1,14 +1,19 @@
 package com.savelieva.jobdashboard.service;
 
+import com.savelieva.jobdashboard.model.CvChoices;
 import com.savelieva.jobdashboard.model.JobStatus;
 import com.savelieva.jobdashboard.model.Vacancy;
+import com.savelieva.jobdashboard.repository.CvRepository;
 import com.savelieva.jobdashboard.repository.StatusRepository;
 import com.savelieva.jobdashboard.repository.VacancyRepository;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
-/** Joins the selected postings on disk with the statuses the dashboard has stored for them. */
+/**
+ * Joins the selected postings on disk with the statuses the dashboard has stored for them and with
+ * the CV the tailoring built for each company.
+ */
 @Service
 public class VacancyService {
 
@@ -23,16 +28,22 @@ public class VacancyService {
 
     private final VacancyRepository vacancies;
     private final StatusRepository statuses;
+    private final CvRepository cvs;
 
-    public VacancyService(VacancyRepository vacancies, StatusRepository statuses) {
+    public VacancyService(VacancyRepository vacancies, StatusRepository statuses,
+                          CvRepository cvs) {
         this.vacancies = vacancies;
         this.statuses = statuses;
+        this.cvs = cvs;
     }
 
     public List<Vacancy> findAll() {
         Map<String, JobStatus> stored = statuses.findAll();
+        // Both sides are read once here: the postings are joined in memory, not file by file.
+        CvChoices built = cvs.findAll();
         return vacancies.findSelected().stream()
-                .map(v -> v.withStatus(stored.getOrDefault(v.url(), JobStatus.EMPTY)))
+                .map(v -> v.withStatus(stored.getOrDefault(v.url(), JobStatus.EMPTY))
+                        .withCv(built.find(v.track(), v.url(), v.company())))
                 .toList();
     }
 

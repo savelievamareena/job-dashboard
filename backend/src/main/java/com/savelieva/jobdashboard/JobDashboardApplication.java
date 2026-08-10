@@ -1,5 +1,6 @@
 package com.savelieva.jobdashboard;
 
+import com.savelieva.jobdashboard.config.CvProperties;
 import com.savelieva.jobdashboard.config.Dotenv;
 import com.savelieva.jobdashboard.config.SearchProperties;
 import org.springframework.boot.SpringApplication;
@@ -7,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(SearchProperties.class)
+@EnableConfigurationProperties({SearchProperties.class, CvProperties.class})
 public class JobDashboardApplication {
 
     public static void main(String[] args) {
