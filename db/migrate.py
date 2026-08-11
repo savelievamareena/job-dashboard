@@ -6,8 +6,12 @@ day updates its row rather than adding one, so the charts count a find once howe
 kept showing up. is_selected is raised by the rows that reached selected.csv and is never
 lowered here — a posting that drops out of the folders keeps the decision made about it.
 
-The board's fields are filled the way FileVacancyRepository, StatusRepository and CvRepository
-read them today, so the flagged rows still reproduce what /api/vacancies serves.
+The board's fields are filled the way the file readers used to read them, so the flagged rows
+reproduce what /api/vacancies served before the board moved onto this database.
+
+job_status is not loaded here and must not be. The board writes its marks straight to that table
+now, so a truncate-and-refill from _status.json would throw away everything marked since the last
+import. The file is no longer read at all.
 
 Emits SQL on stdout instead of connecting itself, so it needs no driver installed and the load
 can be read before it lands:
@@ -28,8 +32,13 @@ from pathlib import Path, PurePosixPath
 # Mirrors backend/src/main/resources/application.yml. Kept here rather than parsed out of it:
 # this runs once per import, and a yaml parser is not worth adding for four constants.
 ROOTS = ["DailySearch", "PortalSearch"]
-BOARD_TRACKS = ["frontend", "fullstack", "other-stacks", "unsorted"]
-STATUS_FILE = "DailySearch/_status.json"
+# The tracks a picked posting may reach the board from, which is the two that name a CV core and
+# no more. other-stacks and unsorted were listed here until 2026-08-11 and never once carried a
+# pick: nothing was removed from the board by dropping them, and nothing about the charts changes
+# either, because every row still loads and the trend views count what was found rather than what
+# was picked. What it stops is a selection run in a track no CV answers, which would put a posting
+# on the board that the tailoring step cannot act on. /select-jobs no longer offers those tracks.
+BOARD_TRACKS = ["frontend", "fullstack"]
 CV_ROOT = "cv-tailored/Poland"
 CV_CORES = ["Frontend", "Fullstack"]
 
@@ -39,9 +48,17 @@ DATE_FOLDER = re.compile(r"\d{4}-\d{2}-\d{2}")
 # to know that, so the mapping happens here and the column holds the answer.
 LANGUAGE = {"node": "javascript", "nodejs": "javascript", "typescript": "javascript",
             "js": "javascript", "ts": "javascript", "dotnet": "csharp", "c#": "csharp",
-            ".net": "csharp"}
-# "unknown" is the skill saying it could not tell, which is absence, not a fourth layer.
-LAYER = {"front": "frontend", "back": "backend", "unknown": None}
+            ".net": "csharp",
+            # Kept identical to DB_LANGUAGE in li_search.py, which explains why react is here:
+            # it is the frontend folder's label, not a language, and unmapped it drew a curve
+            # Statistics.tsx does not plot at all.
+            "react": "javascript"}
+# This map only RENAMES; it is read as LAYER.get(value, value), so anything absent passes through
+# unchanged. That is why `fullstack` and `back-ops` are not listed - the skill and the database
+# spell them the same way - while `front`, `back` and the skill's short `ops` are. "unknown" is
+# the skill saying it could not tell, which is absence, not another layer, so it maps to None.
+# The five layers that reach the chart: frontend, backend, fullstack, devops, back-ops.
+LAYER = {"front": "frontend", "back": "backend", "ops": "devops", "unknown": None}
 
 
 def dashboard_root() -> Path:
@@ -79,6 +96,22 @@ def text(record: dict, key: str) -> str:
 def first_non_blank(*values):
     for value in values:
         if value and value.strip():
+            return value
+    return None
+
+
+def applicant_count(record: dict):
+    """How many have applied, or None where the record does not actually say.
+
+    "applies" is a placeholder, not a count. The newer scrape writes it on every posting and it
+    is zero on all 184 cached records that carry it, while the older "applicants" holds the real
+    text ("80 applicants"). Read literally, a posting seen again under the newer scrape has its
+    real count overwritten by a zero, because the merge below takes the newest sighting that says
+    anything. So a zero here counts as saying nothing.
+    """
+    for key in ("applicants", "applies"):
+        value = text(record, key)
+        if value and value.strip() and value.strip() not in ("0", "0.0"):
             return value
     return None
 
@@ -174,6 +207,16 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
                     record = read_json(cache / f"{identifier}.json")
                     stack = column(job, "stack").lower()
                     layer = column(job, "layer").lower()
+                    # Every day folder written before 2026-08-11 carries `devops` in the STACK
+                    # column, because the skill treated it as a language then. Read literally it
+                    # would put devops straight back into `language` on every load and quietly
+                    # undo the alter script - the loader runs after each search, so the fix would
+                    # never survive a day. Translated here instead of rewriting those files:
+                    # the folders are the record of what was parsed, and editing them to match a
+                    # later rule loses the only evidence of what the older rule actually did.
+                    if stack == "devops":
+                        stack = ""
+                        layer = layer if layer in ("ops", "devops", "back-ops") else "ops"
                     sightings.append({
                         "job_id": identifier,
                         "url": url,
@@ -191,6 +234,9 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
                         "posted_at": column(job, "posted") or None,
                         "found_date": day.name,
                         "is_selected": selected is not None,
+                        # The day this sighting was picked, null when it was only found. The
+                        # board shows this rather than found_date; see schema.sql.
+                        "selected_date": day.name if selected is not None else None,
                         "gap": column(selected, "gap") or None,
                         "source": source or None,
                         "easy_apply": easy_apply(record),
@@ -198,8 +244,7 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
                         "job_type": text(record, "job_type") or None,
                         "location": first_non_blank(text(record, "location"),
                                                     text(record, "job_location")),
-                        "applicants": first_non_blank(text(record, "applicants"),
-                                                      text(record, "applies")),
+                        "applicants": applicant_count(record),
                         "has_text": (cache / f"{identifier}.txt").is_file(),
                     })
 
@@ -209,17 +254,6 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
     notes["ambiguous_job_ids"] = sum(1 for urls in ids.values() if len(urls) > 1)
     notes["postings"] = len(ids)
     return sightings
-
-
-def collect_statuses(root_dir: Path) -> list:
-    statuses = []
-    for url, entry in read_json(root_dir / STATUS_FILE).items():
-        if not isinstance(entry, dict):
-            continue
-        status, note = entry.get("status") or "", entry.get("note") or ""
-        if status.strip() or note.strip():  # an emptied entry is absent, not stored blank
-            statuses.append({"url": url, "status": status, "note": note})
-    return statuses
 
 
 def cv_kind(company: str, pdf_path: str) -> str:
@@ -253,11 +287,12 @@ def collect_cv_queue(root_dir: Path) -> list:
 # --- emitting ----------------------------------------------------------------------------------
 
 SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "language", "layer", "ai_kind",
-                    "posted_at", "found_date", "is_selected", "gap", "source", "easy_apply",
-                    "level", "job_type", "location", "applicants", "has_text"]
+                    "posted_at", "found_date", "is_selected", "selected_date", "gap", "source",
+                    "easy_apply", "level", "job_type", "location", "applicants", "has_text"]
 
-# Everything the newest sighting answers for. found_date, is_selected and has_text are
-# aggregated instead: the first is the earliest sighting, the other two are ever-true.
+# Everything the newest sighting answers for. found_date, selected_date, is_selected and has_text
+# are aggregated instead: the first is the earliest sighting, the second the latest pick, the
+# other two are ever-true.
 LATEST = ["url", "company", "title", "track", "language", "layer", "ai_kind", "posted_at",
           "gap", "source", "easy_apply", "level", "job_type", "location", "applicants"]
 BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
@@ -301,6 +336,7 @@ create temp table vacancy_load (
     posted_at   timestamp,
     found_date  date not null,
     is_selected boolean not null,
+    selected_date date,
     gap         text,
     source      text,
     easy_apply  boolean,
@@ -317,7 +353,7 @@ create temp table vacancy_load (
         return (f"(array_agg({name} order by found_date desc, ord desc) "
                 f"filter (where {name} is not null))[1]")
 
-    target = ["job_id"] + LATEST + ["found_date", "is_selected", "has_text"]
+    target = ["job_id"] + LATEST + ["found_date", "is_selected", "selected_date", "has_text"]
     # The blankable columns are not-null with a '' default, so they cannot take the null the
     # aggregate produces for a posting no sighting ever described.
     picks = [f"    coalesce({latest(c)}, '') as {c}" if c in BLANKABLE
@@ -328,6 +364,10 @@ create temp table vacancy_load (
                 f"then excluded.{c} else v.{c} end" for c in BLANKABLE]
     updates += ["    found_date  = least(v.found_date, excluded.found_date)",
                 "    is_selected = v.is_selected or excluded.is_selected",
+                # greatest ignores nulls in Postgres, which is what keeps the last known pick on
+                # a posting whose selected.csv line has since been removed. is_selected is never
+                # lowered either, so the two stay consistent.
+                "    selected_date = greatest(v.selected_date, excluded.selected_date)",
                 "    has_text    = v.has_text or excluded.has_text"]
     separator = ",\n"
 
@@ -336,6 +376,7 @@ create temp table vacancy_load (
     print(separator.join(picks) + ",")
     print("    min(found_date) as found_date,")
     print("    bool_or(is_selected) as is_selected,")
+    print("    max(selected_date) as selected_date,")
     print("    bool_or(has_text) as has_text")
     print("from vacancy_load")
     print("group by job_id")
@@ -360,7 +401,6 @@ def main() -> None:
     notes = {"selected_off_board": 0, "picked_without_jobs_row": 0}
     scan_days = set()
     sightings = collect_sightings(root_dir, notes, scan_days)
-    statuses = collect_statuses(root_dir)
     cv_rows = collect_cv_queue(root_dir)
 
     print(f"-- generated by db/migrate.py from {root_dir}")
@@ -369,16 +409,16 @@ def main() -> None:
     # Only ever added to: a day the search ran stays one, even if its folder is later cleaned up.
     insert("scan_day", ["day"], [{"day": day} for day in sorted(scan_days)],
            "on conflict do nothing")
-    # These two are small mirrors of one file each, so they are replaced rather than merged.
-    print("truncate job_status, cv_queue restart identity;")
-    insert("job_status", ["url", "status", "note"], statuses)
+    # A small mirror of one file, so it is replaced rather than merged. job_status is deliberately
+    # absent from both this truncate and any insert: the board owns that table, and refilling it
+    # from a file would discard every mark made since the last import.
+    print("truncate cv_queue restart identity;")
     insert("cv_queue", ["core", "company", "url", "pdf_path", "built", "verdict", "kind"], cv_rows)
     print("commit;")
 
     selected = len({s["job_id"] for s in sightings if s["is_selected"]})
     print(f"sightings: {len(sightings)} -> postings: {notes['postings']} ({selected} selected), "
-          f"statuses: {len(statuses)}, cv rows: {len(cv_rows)}, "
-          f"scan days: {len(scan_days)}", file=sys.stderr)
+          f"cv rows: {len(cv_rows)}, scan days: {len(scan_days)}", file=sys.stderr)
     if notes["picked_without_jobs_row"]:
         print(f"note: {notes['picked_without_jobs_row']} selected rows have no jobs.csv row "
               f"under the same day and track", file=sys.stderr)

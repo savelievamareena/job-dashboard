@@ -1,0 +1,4 @@
+# Normalise line endings in the repository regardless of anyone's core.autocrlf.
+# docker-compose.yml arrived with CRLF and tripped the IDE's commit warning; settling it here
+# keeps the fix with the project instead of in one machine's global git config.
+* text=auto eol=lf
