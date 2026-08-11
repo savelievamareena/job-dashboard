@@ -167,7 +167,8 @@ def by_url(rows: list) -> dict:
     return {u: row for row in rows if (u := column(row, "url"))}
 
 
-def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
+def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
+                      corrections: dict = None) -> list:
     """Every (day, track) appearance. Collapsing them to one row per posting happens in SQL.
 
     Fills scan_days on the way through: a date folder exists exactly when a run happened, which
@@ -194,6 +195,19 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
             for track in tracks:
                 found = by_url(read_csv(day / track / "jobs.csv"))
                 picked = by_url(read_csv(day / track / "selected.csv"))
+                # What the reader of the DESCRIPTION corrected, written by /select-jobs. The
+                # search classifies from the title and files the posting into a folder; the
+                # selection then opens the text and sometimes finds the folder is wrong - a
+                # `Senior Frontend Developer` that turns out to be five years of Angular is not
+                # her frontend track. Kept beside jobs.csv rather than edited into it: jobs.csv
+                # is the record of what the parser decided, and overwriting it loses the only
+                # evidence of what the title-only rule actually does.
+                #
+                # It has to reach the loader, not just the database. `track`, `language` and
+                # `layer` are all rebuilt from the folder on every load, so an UPDATE run
+                # straight against Postgres is undone by the next /find-jobs - that happened to
+                # 15 rows on 2026-08-11. Applied here, the correction is re-applied every time.
+                fixed = by_url(read_csv(day / track / "reclassified.csv"))
                 if picked and track not in BOARD_TRACKS:
                     # The board would never reach these, so flagging them would put rows on it
                     # that /api/vacancies does not return.
@@ -217,6 +231,61 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
                     if stack == "devops":
                         stack = ""
                         layer = layer if layer in ("ops", "devops", "back-ops") else "ops"
+                    # The description won where it was read. Only the three columns the
+                    # correction names are replaced, and a blank cell means "no correction for
+                    # this one" rather than "make it empty", so a row that only fixes the track
+                    # keeps the language the search worked out.
+                    correction = fixed.get(url)
+                    if correction:
+                        notes["reclassified"] += 1
+                        stack = column(correction, "language").lower() or stack
+                        layer = column(correction, "layer").lower() or layer
+                        # Also kept aside as its own statement. The classification columns below
+                        # are fill-only-if-null now, so a correction folded into a sighting would
+                        # lose to whatever the search already wrote - which is exactly the value
+                        # the reader of the description is overruling. Days are walked newest
+                        # first, so the first correction seen for a posting is the newest one.
+                        if corrections is not None:
+                            corrections.setdefault(identifier, {
+                                "track": column(correction, "track").lower() or None,
+                                "language": column(correction, "language").lower() or None,
+                                "layer": column(correction, "layer").lower() or None})
+                    row_track = column(correction, "track").lower() or track
+                    # Fullstack without Java is not one of her tracks, whatever folder the row
+                    # sits in. Her rule, 2026-08-11: "везде где у нас фулстек технология НО БЕЗ
+                    # ДЖАВЫ например реакт и джанго, ангуляр и дотнет, пишется трек other-stacks".
+                    #
+                    # li_search.py routes new postings this way already, so this covers the day
+                    # folders written BEFORE the rule existed. It has to live here rather than in
+                    # a one-off UPDATE, because `track` is rebuilt from the folder on every load:
+                    # the same 15 rows went back to `frontend` on 2026-08-11 each time the loader
+                    # ran, which is four times in one day that the fix looked applied and was not.
+                    # In the FULLSTACK folder `stack` has to be non-empty: day folders written
+                    # before 2026-08-10 have no stack column at all, so an empty string there
+                    # means "this file never recorded a language", not "the language is not Java".
+                    # Read as the latter it moved 127 rows out of `fullstack` on the first run of
+                    # this rule, 9 of them already selected. An unknown language leaves the
+                    # folder's answer alone.
+                    #
+                    # In the FRONTEND folder the empty stack proves nothing either, but the FOLDER
+                    # does: a fullstack-layer posting with Java on the server half is filed under
+                    # fullstack/ by every version of li_search.py there has ever been. So a
+                    # fullstack layer sitting in frontend/ is non-Java by construction, and the
+                    # language column is not needed to say so.
+                    #
+                    # Without this half the rule could not fire at all on the two folders it
+                    # names. frontend/jobs.csv and fullstack/jobs.csv have never carried a `stack`
+                    # column - not since 2026-08-11, never, on any day: for these two tracks the
+                    # language was taken to follow from the folder, which is what the two updates
+                    # at the bottom of this file still do. So `and stack` was never satisfied and
+                    # every such row reloaded as `frontend` on every load. The one path that does
+                    # supply a language here is reclassified.csv, which is why the fullstack half
+                    # of the condition below is still worth keeping.
+                    if LAYER.get(layer, layer) == "fullstack" and (
+                            row_track == "frontend"
+                            or (row_track == "fullstack" and stack
+                                and LANGUAGE.get(stack, stack) != "java")):
+                        row_track = "other-stacks"
                     sightings.append({
                         "job_id": identifier,
                         "url": url,
@@ -227,7 +296,7 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set) -> list:
                         "title": first_non_blank(text(record, "job_title"),
                                                  titles.get(identifier, ""),
                                                  column(selected, "title")),
-                        "track": track,
+                        "track": row_track,
                         "language": LANGUAGE.get(stack, stack) or None,
                         "layer": LAYER.get(layer, layer) or None,
                         "ai_kind": column(job, "ai_kind").lower() or None,
@@ -296,6 +365,18 @@ SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "language", "l
 LATEST = ["url", "company", "title", "track", "language", "layer", "ai_kind", "posted_at",
           "gap", "source", "easy_apply", "level", "job_type", "location", "applicants"]
 BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
+# What the SEARCH owns. li_search.py works these out from the title and the description and writes
+# them to `vacancy` itself, before any filtering; this loader only ever saw the folder a posting
+# landed in, which is a coarser answer to the same question. Both writing them is what let the two
+# drift: the same rule had to be spelled twice, and the copy living here silently stopped matching
+# (the fullstack-without-Java rule was dead in this file while it worked in the search).
+#
+# So here they became fill-only-if-null: a posting the search never reached - a day the database
+# was down, or every folder collected before save_to_db() existed on 2026-08-11 - still gets its
+# classification from the folder, and everything else keeps the reading the search made. The one
+# thing that overrules the search is reclassified.csv, and that is applied as its own statement
+# after the upsert, precisely because it has to win.
+CLASSIFICATION = ["track", "language", "layer", "ai_kind"]
 
 
 def literal(value) -> str:
@@ -315,7 +396,7 @@ def insert(table: str, columns: list, rows: list, on_conflict: str = "") -> None
           + (f"\n{on_conflict}" if on_conflict else "") + ";")
 
 
-def emit_vacancy_upsert(sightings: list) -> None:
+def emit_vacancy_upsert(sightings: list, corrections: dict = None) -> None:
     """Collapse the sightings to one row per posting, then merge them into what is already there.
 
     The newest sighting wins per column, but only where it has something to say: the skills
@@ -359,7 +440,10 @@ create temp table vacancy_load (
     picks = [f"    coalesce({latest(c)}, '') as {c}" if c in BLANKABLE
              else f"    {latest(c)} as {c}" for c in LATEST]
     updates = [f"    {c} = coalesce(excluded.{c}, v.{c})"
-               for c in LATEST if c not in BLANKABLE]
+               for c in LATEST if c not in BLANKABLE and c not in CLASSIFICATION]
+    # Reversed on purpose: the value already in the table wins, and the folder only fills a hole.
+    # See CLASSIFICATION.
+    updates += [f"    {c} = coalesce(v.{c}, excluded.{c})" for c in CLASSIFICATION]
     updates += [f"    {c} = case when coalesce(excluded.{c}, '') <> '' "
                 f"then excluded.{c} else v.{c} end" for c in BLANKABLE]
     updates += ["    found_date  = least(v.found_date, excluded.found_date)",
@@ -383,6 +467,17 @@ create temp table vacancy_load (
     print("on conflict (job_id) do update set")
     print(separator.join(updates) + ";")
 
+    # Somebody read the actual description and found the search wrong. This is the ONE thing that
+    # overrules the search's own classification, so it is a statement of its own, after the upsert
+    # where the classification columns only fill holes. Re-applied on every load rather than run
+    # once by hand: a plain UPDATE against Postgres is undone by the next /find-jobs, which is
+    # what happened to 15 rows on 2026-08-11.
+    for job_id, fix in sorted((corrections or {}).items()):
+        sets = ", ".join(f"{c} = {literal(LANGUAGE.get(v, v) if c == 'language' else v)}"
+                         for c, v in fix.items() if v)
+        if sets:
+            print(f"update vacancy set {sets} where job_id = {literal(job_id)};")
+
     # The parser only classifies the other-stacks and ai tracks; for these two the search itself
     # is language-scoped, so the folder is the answer and no column was ever written. Applied on
     # every load rather than once by hand, or the next import leaves its new rows unclassified.
@@ -398,14 +493,15 @@ def main() -> None:
     if not root_dir.is_dir():
         sys.exit(f"DASHBOARD_ROOT points at {root_dir}, which is not a folder.")
 
-    notes = {"selected_off_board": 0, "picked_without_jobs_row": 0}
+    notes = {"selected_off_board": 0, "picked_without_jobs_row": 0, "reclassified": 0}
     scan_days = set()
-    sightings = collect_sightings(root_dir, notes, scan_days)
+    corrections: dict = {}
+    sightings = collect_sightings(root_dir, notes, scan_days, corrections)
     cv_rows = collect_cv_queue(root_dir)
 
     print(f"-- generated by db/migrate.py from {root_dir}")
     print("begin;")
-    emit_vacancy_upsert(sightings)
+    emit_vacancy_upsert(sightings, corrections)
     # Only ever added to: a day the search ran stays one, even if its folder is later cleaned up.
     insert("scan_day", ["day"], [{"day": day} for day in sorted(scan_days)],
            "on conflict do nothing")
@@ -422,6 +518,9 @@ def main() -> None:
     if notes["picked_without_jobs_row"]:
         print(f"note: {notes['picked_without_jobs_row']} selected rows have no jobs.csv row "
               f"under the same day and track", file=sys.stderr)
+    if notes["reclassified"]:
+        print(f"note: {notes['reclassified']} postings were reclassified from their description "
+              f"by /select-jobs", file=sys.stderr)
     if notes["selected_off_board"]:
         print(f"note: {notes['selected_off_board']} selected rows sit in a track the board does "
               f"not scan and were left unflagged", file=sys.stderr)
