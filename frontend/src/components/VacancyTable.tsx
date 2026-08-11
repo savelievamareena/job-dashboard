@@ -84,7 +84,17 @@ export const VacancyTable = ({
         </thead>
         <tbody>
             {vacancies.map((vacancy) => (
-                <tr key={vacancy.url} className={INACTIVE.has(vacancy.status) ? "done" : ""}>
+                /*
+                 * The url alone is not unique: the same posting picked on two days, or under two
+                 * tracks on one day, is two rows here on purpose - they carry different dates and
+                 * stacks. Two rows under one key make React map both onto the same node, so every
+                 * reorder leaves an extra row behind and the table grows until the page reloads.
+                 * What identifies a row is where it was found.
+                 */
+                <tr
+                    key={`${vacancy.date}|${vacancy.source}|${vacancy.track}|${vacancy.url}`}
+                    className={INACTIVE.has(vacancy.status) ? "done" : ""}
+                >
                     <td>{vacancy.date}</td>
                     <td className="company" title={vacancy.company}>
                         {vacancy.company}

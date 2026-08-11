@@ -3,116 +3,80 @@ package com.savelieva.jobdashboard.repository;
 import com.savelieva.jobdashboard.config.CvProperties;
 import com.savelieva.jobdashboard.model.CvChoices;
 import com.savelieva.jobdashboard.model.CvKind;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * Reads which CV was built for each company out of the queue the tailoring skill appends to:
- *
- * <pre>
- *   &lt;root&gt;/&lt;core&gt;/review-queue.csv     company,url,pdf_path,built,verdict
- * </pre>
+ * Reads which CV was built for each posting out of the queue the loader imports from
+ * {@code <core>/review-queue.csv}.
  *
  * <p>A row is one posting: two ads from the same agency often get different answers, one tailored
- * and one sent the core, so keying by company would let the first one speak for the second.
+ * and one sent the core, so keying by company would let the first one speak for the second. Rows
+ * written before the queue carried a URL are kept under their company, where they answer for every
+ * posting of it. That is all such a row can honestly say.
  *
- * <p>The path in a row says which of the two answers it is. A CV tailored for a company lives in a
- * folder named after that company; anything else under the core is the core CV, queued under the
- * company it will be sent to. That naming is what the tailoring skill guarantees, and it is the
- * only marker the queue carries.
- *
- * <p>Rows written before the queue carried a URL are kept under their company, where they answer
- * for every posting of it. That is all such a row can honestly say.
- *
- * <p>Read on every request, like the postings themselves, so a CV built while the board is open
- * shows up on reload.
+ * <p>Whether a row is a tailored CV or the core one is decided by the loader and stored in the
+ * kind column. It reads that off the path: a CV tailored for a company lives in a folder named
+ * after that company, and anything else under the core is the core CV queued under the company it
+ * will be sent to. That naming is what the tailoring skill guarantees, and it is the only marker
+ * the queue carries.
  */
 @Repository
 public class CvRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(CvRepository.class);
-    private static final String QUEUE = "review-queue.csv";
-    private static final CSVFormat CSV = CSVFormat.DEFAULT.builder()
-            .setHeader()
-            .setSkipHeaderRecord(true)
-            .setIgnoreSurroundingSpaces(true)
-            .build();
+    /**
+     * Ordered by id so a repeated row still wins the way it did in the file, where a later line
+     * overwrote an earlier one. Without the order Postgres is free to hand back either, and the
+     * queue is appended to by hand often enough for that to matter.
+     */
+    private static final String QUEUE = "select core, url, company, kind from cv_queue order by id";
 
     private final CvProperties properties;
+    private final JdbcTemplate jdbc;
 
-    public CvRepository(CvProperties properties) {
+    public CvRepository(CvProperties properties, JdbcTemplate jdbc) {
         this.properties = properties;
+        this.jdbc = jdbc;
     }
 
     public CvChoices findAll() {
-        Path root = properties.root();
-        if (root == null || !Files.isDirectory(root)) {
-            log.info("CV root {} does not exist, no CV is shown for any company", root);
-            return CvChoices.EMPTY;
-        }
-        Map<String, CvChoices.Queue> byCore = new LinkedHashMap<>();
+        // Every configured core is listed, queue or not. The list comes from the configuration and
+        // must not be read back out of this table with a select distinct: a core with nothing built
+        // yet still owns its track, and dropping it would send that track looking for an answer in
+        // the other core, which is exactly the mix-up the per-core split exists to prevent.
+        Map<String, Map<String, CvKind>> byUrl = new LinkedHashMap<>();
+        Map<String, Map<String, CvKind>> byCompany = new LinkedHashMap<>();
         for (String core : properties.cores()) {
-            // Every configured core is listed, queue or not: a core with nothing built yet still
-            // owns its track, and dropping it would send that track looking for an answer in the
-            // other core, which is exactly the mix-up the per-core split exists to prevent.
-            byCore.put(core.toLowerCase(Locale.ROOT), readQueue(root.resolve(core).resolve(QUEUE)));
+            byUrl.put(key(core), new LinkedHashMap<>());
+            byCompany.put(key(core), new LinkedHashMap<>());
         }
-        return new CvChoices(byCore);
-    }
 
-    private CvChoices.Queue readQueue(Path queue) {
-        if (!Files.isRegularFile(queue)) {
-            return new CvChoices.Queue(Map.of(), Map.of());
-        }
-        Map<String, CvKind> byUrl = new LinkedHashMap<>();
-        Map<String, CvKind> byCompany = new LinkedHashMap<>();
-        for (CSVRecord row : read(queue)) {
-            String company = column(row, "company");
-            if (company.isBlank()) {
-                continue;
+        jdbc.query(QUEUE, rs -> {
+            String core = key(rs.getString("core"));
+            Map<String, CvKind> urls = byUrl.get(core);
+            if (urls == null) {
+                return;   // a queue for a core the configuration does not list is not ours to read
             }
-            CvKind kind = kind(company, column(row, "pdf_path"));
-            String url = column(row, "url");
-            if (url.isBlank()) {
-                byCompany.put(company.toLowerCase(Locale.ROOT), kind);
+            CvKind kind = CvKind.valueOf(rs.getString("kind").toUpperCase(Locale.ROOT));
+            String url = rs.getString("url");
+            if (url == null || url.isBlank()) {
+                byCompany.get(core).put(key(rs.getString("company")), kind);
             } else {
-                byUrl.put(url, kind);
+                urls.put(url.trim(), kind);
             }
-        }
-        return new CvChoices.Queue(byUrl, byCompany);
+        });
+
+        Map<String, CvChoices.Queue> queues = new LinkedHashMap<>();
+        byUrl.forEach((core, urls) ->
+                queues.put(core, new CvChoices.Queue(urls, byCompany.get(core))));
+        return new CvChoices(queues);
     }
 
-    /** A CV built for this company sits in a folder carrying its name; everything else is the core. */
-    private CvKind kind(String company, String pdfPath) {
-        Path parent = Path.of(pdfPath).getParent();
-        boolean ownFolder = parent != null
-                && parent.getFileName().toString().equalsIgnoreCase(company.trim());
-        return ownFolder ? CvKind.TAILORED : CvKind.BASE;
-    }
-
-    private Iterable<CSVRecord> read(Path file) {
-        try (CSVParser parser = CSVParser.parse(file, StandardCharsets.UTF_8, CSV)) {
-            return parser.getRecords();
-        } catch (IOException | IllegalArgumentException e) {
-            // The queue is a side note on the board: a malformed one costs a column, not the rows.
-            log.warn("cannot read {}", file, e);
-            return List.of();
-        }
-    }
-
-    private String column(CSVRecord row, String name) {
-        return row.isMapped(name) && row.isSet(name) ? row.get(name).trim() : "";
+    /** Folder names are written by hand in both places, so they agree on spelling, not on case. */
+    private static String key(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 }

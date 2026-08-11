@@ -9,8 +9,15 @@ import type { TrendPoint } from "@/types";
  * value outside the list folds into the last slot rather than taking a ninth hue nobody can tell
  * from the eight already on screen.
  */
-const LANGUAGES = ["javascript", "java", "php", "go", "python", "csharp", "devops", "other"];
-const LAYERS = ["frontend", "backend", "fullstack"];
+const LANGUAGES = ["javascript", "java", "php", "go", "python", "csharp", "other"];
+/**
+ * Must name every value `trend_layer` can return, and the view is the authority on that list.
+ * Not a style rule: `bucket()` below folds anything unnamed into the LAST entry and ADDS its
+ * count there, so a layer missing from this array is not absent from the chart, it is drawn
+ * under a neighbour's name. `devops` and `back-ops` arrived 2026-08-11 and spent an afternoon
+ * being counted as fullstack, inflating that curve by 114 postings.
+ */
+const LAYERS = ["frontend", "backend", "fullstack", "devops", "back-ops"];
 const AI_KINDS = ["mlops", "llm-app", "ml", "other"];
 
 /**

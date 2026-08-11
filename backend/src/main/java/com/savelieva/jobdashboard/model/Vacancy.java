@@ -1,13 +1,21 @@
 package com.savelieva.jobdashboard.model;
 
 /**
- * One selected posting, assembled from the three files the parsing skills leave on disk:
- * selected.csv (company, title, gap), jobs.csv (stack) and the cached _descriptions record.
+ * One picked posting, as the board shows it: a row of the vacancy table joined with the mark set
+ * on it and the CV built for it.
  *
- * <p>Every field except {@code url} may be missing: an older cached record uses different key
- * names, and some days were parsed before the cache existed at all. Missing reads as an empty
+ * <p>Every field except {@code url} may be missing. The loader fills them from whatever the
+ * parsing knew, and it knew different things on different days: an older cached record uses other
+ * key names, and some days were parsed before the cache existed at all. Missing reads as an empty
  * string, or as {@code null} for {@code easyApply} and {@code cv}, where "not known" and "no"
  * differ.
+ *
+ * <p>{@code date} is the day the posting was picked, not the day it was found. The two are a day
+ * apart often enough to matter, and the charts count by the other one.
+ *
+ * <p>{@code stack} is always empty and kept only because the board still renders the field. The
+ * column it came from disappeared from jobs.csv, and the language the loader stores instead just
+ * repeats the track for every picked posting.
  */
 public record Vacancy(
         String date,

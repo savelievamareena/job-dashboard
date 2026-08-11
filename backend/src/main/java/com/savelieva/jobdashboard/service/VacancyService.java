@@ -11,8 +11,12 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
- * Joins the selected postings on disk with the statuses the dashboard has stored for them and with
- * the CV the tailoring built for each company.
+ * Joins the picked postings with the marks the dashboard has stored for them and with the CV the
+ * tailoring built for each company.
+ *
+ * <p>Three queries rather than one join. They read three tables that answer three different
+ * questions, the two small ones are a handful of rows each, and keeping them apart is what lets
+ * the marks be written without touching anything the loader owns.
  */
 @Service
 public class VacancyService {

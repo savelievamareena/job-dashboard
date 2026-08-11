@@ -19,7 +19,6 @@
 
     <properties>
         <java.version>21</java.version>
-        <commons-csv.version>1.12.0</commons-csv.version>
         <frontend.dir>${project.basedir}/../frontend</frontend.dir>
         <npm.executable>npm</npm.executable>
     </properties>
@@ -33,14 +32,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-csv</artifactId>
-            <version>${commons-csv.version}</version>
-        </dependency>
         <!-- Plain JDBC, deliberately not spring-boot-starter-data-jpa: JPA brings ddl-auto, which
              would let Hibernate alter or drop the tables the loader owns, and the trend views have
-             no primary key for an entity to be mapped onto. This app only reads. -->
+             no primary key for an entity to be mapped onto. The one table this application writes
+             is job_status, which is a primary key and two text columns and needs nothing more. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>

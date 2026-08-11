@@ -64,8 +64,8 @@ public final class Dotenv {
         try {
             lines = Files.readAllLines(file);
         } catch (IOException e) {
-            // An unreadable .env is not worth aborting on: the variable may well come from the
-            // environment instead, and SearchProperties reports it clearly if it does not.
+            // An unreadable .env is not worth aborting on: the variables may well come from the
+            // environment instead, and a database that cannot be reached is reported per request.
             return values;
         }
         for (String line : lines) {

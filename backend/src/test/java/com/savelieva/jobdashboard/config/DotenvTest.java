@@ -1,12 +1,10 @@
 package com.savelieva.jobdashboard.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -95,27 +93,6 @@ class DotenvTest {
         Dotenv.load(dir);
 
         assertThat(System.getProperty(KEY)).isNull();
-    }
-
-    @Test
-    void refusesToStartWhenTheRootWasNeverResolved() {
-        // Spring leaves an unresolved placeholder in the value rather than failing, so the check
-        // lives here. Without it the board is simply empty and looks like a quiet day.
-        assertThatThrownBy(() -> new SearchProperties(
-                List.of(Path.of("${DASHBOARD_ROOT}/DailySearch")),
-                Path.of("/tmp/_status.json"),
-                List.of("frontend")))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("DASHBOARD_ROOT is not set")
-                .hasMessageContaining(".env.example");
-    }
-
-    @Test
-    void acceptsAResolvedRoot() {
-        assertThat(new SearchProperties(
-                List.of(Path.of("/Users/someone/CVs/DailySearch")),
-                Path.of("/Users/someone/CVs/DailySearch/_status.json"),
-                List.of("frontend")).roots()).hasSize(1);
     }
 
     private Path write(String content) throws IOException {
