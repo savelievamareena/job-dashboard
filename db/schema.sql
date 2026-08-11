@@ -11,7 +11,7 @@
 --   vacancy    <- <root>/<date>/<track>/jobs.csv, the full find, with is_selected raised for the
 --                 rows that also appear in selected.csv; enriched from _titles.json and the
 --                 _descriptions cache
---   job_status <- <root>/_status.json, the one file the app writes
+--   job_status <- nothing. The application owns it; see the table for why.
 --   cv_queue   <- cv-tailored/<core>/review-queue.csv
 --
 -- Names are snake_case and unquoted on purpose: Postgres folds unquoted identifiers to lower
@@ -19,6 +19,11 @@
 -- renames at the edge instead — select is_selected as "isSelected".
 --
 -- Run with:  psql -v ON_ERROR_STOP=1 -f db/schema.sql
+--
+-- ONLY on an empty database. The drop below takes vacancy with it, and vacancy holds the whole
+-- find, not a cache of it: the dated folders are cleaned up over time, so what is dropped here
+-- cannot always be reloaded. To change the shape of a database already in use, write an alter
+-- script next to this file instead and apply that; see db/alter-2026-08-11-board-on-db.sql.
 
 begin;
 
@@ -76,6 +81,17 @@ create table vacancy (
     -- The board's flag. Only ever raised by an import, never lowered: a posting that drops out
     -- of the folders must not quietly lose the decision to apply to it. Clear it by hand.
     is_selected boolean not null default false,
+
+    -- The day the posting was picked, which is the date the board shows in its first column.
+    -- Deliberately not found_date: a posting is often found on one day and picked the next, and
+    -- eight of the seventy-eight picked rows differ that way today. found_date cannot be
+    -- redefined to mean this, because the trend charts count a posting on the day it was first
+    -- seen, so the two dates have to live side by side.
+    --
+    -- The latest day it was picked, so a posting picked again carries the current decision.
+    -- Null where is_selected is true but no selected.csv line is left to say when: the flag is
+    -- never lowered, so it outlives the line. The board falls back to found_date there.
+    selected_date date,
     gap         text,                -- from selected.csv
 
     -- What the board renders beside the above. Not part of the chart story, but the board reads
@@ -89,15 +105,29 @@ create table vacancy (
     has_text    boolean not null default false
 );
 
-create index vacancy_board_idx on vacancy (found_date desc, lower(company)) where is_selected;
+-- Matches the board's one query, ordering included: newest pick first, then company ignoring
+-- case. The coalesce has to be repeated here or the index does not answer that order.
+create index vacancy_board_idx
+    on vacancy (coalesce(selected_date, found_date) desc, lower(company)) where is_selected;
 create index vacancy_language_idx on vacancy (found_date, language) where language is not null;
 create index vacancy_layer_idx on vacancy (found_date, layer) where layer is not null;
 create index vacancy_ai_idx on vacancy (found_date, ai_kind) where ai_kind is not null;
 
--- url to status and note, the shape _status.json already uses. An untouched posting has no row
--- here, the same way it has no key in the file: the app deletes an entry once it is empty again.
+-- What the board has been told about a posting: applied, not a fit, closed, plus a free note.
+--
+-- The one table here the application writes, and the only one the loader must not touch. It used
+-- to mirror _status.json and was truncated and refilled on every import; now that the board
+-- writes straight here, a refill would throw away every mark made since the last import. There is
+-- no insert into this table in migrate.py, and there must not be one.
+--
+-- Keyed by job_id like vacancy, not by the url the old file used. A mark belongs to a posting,
+-- and a url is a weaker name for one: the same posting written with and without a trailing slash
+-- was two rows, and a mark could sit on a url no vacancy row had. The foreign key ends both.
+--
+-- An untouched posting has no row here, the same way it had no key in the file. Clearing a mark
+-- deletes the row rather than blanking it, which is what the check constraint requires.
 create table job_status (
-    url    text primary key,
+    job_id text primary key references vacancy (job_id) on delete cascade,
     status text not null default '',
     note   text not null default '',
     constraint job_status_not_empty check (status <> '' or note <> '')
@@ -151,10 +181,18 @@ order by 1, 2;
 
 -- "unknown" is dropped rather than drawn: it is the skill saying it could not tell, which is
 -- not a fourth layer.
+--
+-- `devops` and `back-ops` joined the list on 2026-08-11, when devops stopped being a value of
+-- `language`. It never was a language - it is what the person does - and in the language column
+-- it drew a curve beside Python and Java while swallowing the language of every ad that happened
+-- to name a cloud. `devops` is infrastructure with no language named; `back-ops` is an ad that
+-- wants a backend language AND the platform, and it keeps its language so it still counts in
+-- trend_language. The list is explicit rather than "layer is not null" on purpose: a value the
+-- skill invents by accident should stay off the chart until someone adds it here deliberately.
 create view trend_layer as
 select coalesce(posted_at::date, found_date) as day, layer as series, count(*)::int as count
 from vacancy
-where layer in ('frontend', 'backend', 'fullstack')
+where layer in ('frontend', 'backend', 'fullstack', 'devops', 'back-ops')
 group by 1, 2
 order by 1, 2;
 

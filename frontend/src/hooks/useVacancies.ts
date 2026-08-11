@@ -52,9 +52,18 @@ export const useVacancies = () => {
             return;
         }
 
-        const next = { ...current, ...patch };
-        rows.current = rows.current.map((vacancy) => (vacancy.url === url ? next : vacancy));
+        // Patch each row on its own rather than building one row and assigning it to all of
+        // them. The same posting can sit on the board more than once - found on two days, or
+        // under two tracks - and those rows differ in date, track and stack. Sharing one built
+        // row overwrites those fields with the first match's, so the others start claiming a day
+        // they were never found on, and a date filter then shows them as identical twins.
+        rows.current = rows.current.map((vacancy) =>
+            vacancy.url === url ? { ...vacancy, ...patch } : vacancy,
+        );
         setState((state) => ({ ...state, vacancies: rows.current }));
+
+        // Status and note belong to the posting, not to the sighting, so either row answers.
+        const next = { ...current, ...patch };
 
         saveStatus(url, next.status, next.note).catch((error: unknown) =>
             setState((state) => ({

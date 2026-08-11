@@ -13,33 +13,20 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:}
     hikari:
-      # Do not probe the database while starting. The board reads files and owes the database
-      # nothing, so a stopped container must cost the statistics page and nothing else; the
-      # default would refuse to start the whole application.
+      # Do not probe the database while starting. Both pages need it now, so a stopped container
+      # empties the whole dashboard either way - but it has to empty it onto a page that says
+      # which container to start, and an application that refuses to boot cannot say anything.
       initialization-fail-timeout: -1
-      # The default is 30s, which is how long the statistics page would sit on a spinner before
-      # admitting the container is down. The database is on localhost: if it is there at all, it
-      # answers in well under this.
+      # The default is 30s, which is how long a page would sit on a spinner before admitting the
+      # container is down. The database is on localhost: if it is there at all, it answers in
+      # well under this.
       connection-timeout: 4000
 
 dashboard:
-  # DASHBOARD_ROOT is the folder the parsing skills write into. It has no default on purpose:
-  # a personal path does not belong in a repository, and a wrong one would silently show an
-  # empty board instead of failing. Set it in .env (see .env.example) or in the environment.
-  roots:
-    - ${DASHBOARD_ROOT}/DailySearch
-    - ${DASHBOARD_ROOT}/PortalSearch
-  # The only file this app writes.
-  status-file: ${DASHBOARD_ROOT}/DailySearch/_status.json
-  tracks:
-    - frontend
-    - fullstack
-    - other-stacks
-    - unsorted
   cv:
-    # Where the tailoring skill keeps <core>/review-queue.csv. A core answers the track of the
-    # same name, so Frontend is what a frontend posting is told about.
-    root: ${DASHBOARD_ROOT}/cv-tailored/Poland
+    # Which CV cores exist. A core answers the track of the same name, so Frontend is what a
+    # frontend posting is told about. Kept here rather than read back out of cv_queue: a core
+    # with nothing built yet still owns its track and has no rows to be found by.
     cores:
       - Frontend
       - Fullstack

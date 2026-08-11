@@ -1,94 +1,104 @@
 package com.savelieva.jobdashboard.repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.savelieva.jobdashboard.config.SearchProperties;
 import com.savelieva.jobdashboard.model.JobStatus;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * The one file this app owns: a url to {status, note} map, kept in the shape the Python dashboard
- * wrote so the two can be swapped without losing what has already been marked.
+ * The marks the board sets on a posting: how far it got, and a free note.
  *
- * <p>Read on every request rather than cached, because the file is small and may also be edited by
- * hand between requests. Writes are serialised and land through a temp file, so an interrupted save
- * cannot leave a half written map behind.
+ * <p>The one thing this application writes. Everything else in the database belongs to the loader,
+ * which is why job_status is the only table migrate.py never truncates: a refill from a file would
+ * throw away every mark made since the last import.
+ *
+ * <p>These used to live in a _status.json the loader mirrored into the table on every run, so the
+ * same mark existed in two places and the file was the one that won. The file is no longer read or
+ * written. Marks made before the move were carried into the table by
+ * {@code db/alter-2026-08-11-board-on-db.sql}.
+ *
+ * <p>Read on every request rather than cached: the map is tiny, and a mark set in another tab
+ * should show up on reload.
  */
 @Repository
 public class StatusRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(StatusRepository.class);
-    private static final TypeReference<LinkedHashMap<String, JobStatus>> MAP_TYPE =
-            new TypeReference<>() {};
+    /**
+     * Keyed by url for the caller, stored by job_id. The board knows a posting by its url and the
+     * table names it the way vacancy does, so the join is what translates between the two.
+     */
+    private static final String ALL = """
+            select v.url, s.status, s.note
+            from job_status s
+            join vacancy v on v.job_id = s.job_id
+            """;
 
-    private final Path file;
-    private final ObjectMapper mapper;
-    private final ReentrantLock writeLock = new ReentrantLock();
+    /**
+     * Selecting the job_id out of vacancy rather than binding it directly is what enforces that a
+     * mark names a posting the database actually holds. An unknown one writes no row and is
+     * reported, instead of failing on the foreign key with a message about a constraint.
+     */
+    private static final String UPSERT = """
+            insert into job_status (job_id, status, note)
+            select v.job_id, ?, ? from vacancy v where v.job_id = ?
+            on conflict (job_id) do update set status = excluded.status, note = excluded.note
+            """;
 
-    public StatusRepository(SearchProperties properties, ObjectMapper mapper) {
-        this.file = properties.statusFile();
-        this.mapper = mapper;
+    /** An emptied mark leaves no row, the same way it left no key in the file. */
+    private static final String DELETE = "delete from job_status where job_id = ?";
+
+    private final JdbcTemplate jdbc;
+
+    public StatusRepository(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     public Map<String, JobStatus> findAll() {
-        if (file == null || !Files.isRegularFile(file)) {
-            return Map.of();
-        }
-        try {
-            return mapper.readValue(Files.readString(file), MAP_TYPE);
-        } catch (IOException e) {
-            // A corrupt status file must not take the whole dashboard down: the vacancies on disk
-            // are still worth showing, and the next save rewrites the file cleanly.
-            log.warn("cannot read status file {}, continuing without stored statuses", file, e);
-            return Map.of();
-        }
+        Map<String, JobStatus> all = new LinkedHashMap<>();
+        jdbc.query(ALL, rs -> {
+            all.put(rs.getString("url"), new JobStatus(rs.getString("status"), rs.getString("note")));
+        });
+        return all;
     }
 
     public JobStatus find(String url) {
         return findAll().getOrDefault(url, JobStatus.EMPTY);
     }
 
-    /** Stores the status for one posting, or removes the entry once it is empty again. */
+    /**
+     * Stores the mark for one posting, or removes it once it is empty again.
+     *
+     * @throws UnknownPostingException when no posting in the database carries this url
+     */
     public void save(String url, JobStatus status) {
-        writeLock.lock();
-        try {
-            Map<String, JobStatus> all = new LinkedHashMap<>(findAll());
-            if (status.isEmpty()) {
-                all.remove(url);
-            } else {
-                all.put(url, status);
-            }
-            write(all);
-        } finally {
-            writeLock.unlock();
+        String jobId = jobId(url);
+        if (status.isEmpty()) {
+            // Nothing to clear is not a failure: an untouched posting has no row to begin with,
+            // so clearing it twice has to be as harmless as clearing it once.
+            jdbc.update(DELETE, jobId);
+            return;
+        }
+        if (jdbc.update(UPSERT, status.status(), status.note(), jobId) == 0) {
+            throw new UnknownPostingException(url);
         }
     }
 
-    private void write(Map<String, JobStatus> all) {
-        try {
-            Path parent = file.toAbsolutePath().getParent();
-            Files.createDirectories(parent);
-            Path tmp = Files.createTempFile(parent, "_status", ".json");
-            Files.writeString(tmp, mapper.writerWithDefaultPrettyPrinter().writeValueAsString(all));
-            try {
-                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("cannot write status file " + file, e);
+    /**
+     * The trailing part of the url, which is how every part of this project names a posting: the
+     * loader derives it the same way, and the alter script derived it the same way when it moved
+     * the old marks over.
+     */
+    private String jobId(String url) {
+        String trimmed = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+        int cut = trimmed.lastIndexOf('/');
+        return cut < 0 ? trimmed : trimmed.substring(cut + 1);
+    }
+
+    /** A mark was sent for a posting the database does not hold, most likely from a stale tab. */
+    public static class UnknownPostingException extends RuntimeException {
+        public UnknownPostingException(String url) {
+            super("no posting in the database has the url " + url);
         }
     }
 }
