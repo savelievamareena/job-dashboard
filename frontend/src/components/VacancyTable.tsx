@@ -1,4 +1,4 @@
-import { NoteInput } from "@/components/NoteInput";
+import { DebouncedInput } from "@/components/DebouncedInput";
 import type { SortKey, Vacancy } from "@/types";
 
 type Props = {
@@ -7,7 +7,7 @@ type Props = {
     sortKey: SortKey;
     sortDir: 1 | -1;
     onSort: (key: SortKey) => void;
-    onUpdate: (url: string, patch: Partial<Pick<Vacancy, "status" | "note">>) => void;
+    onUpdate: (url: string, patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl">>) => void;
 };
 
 /** A posting with one of these is out of play: rejected, or gone from LinkedIn entirely. */
@@ -22,6 +22,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "level", label: "Level" },
     { key: "cv", label: "CV" },
     { key: "status", label: "Status" },
+    { key: "applyUrl", label: "Apply link" },
 ];
 
 const ApplyRoute = ({ easyApply }: { easyApply: boolean | null }) => {
@@ -35,6 +36,59 @@ const ApplyRoute = ({ easyApply }: { easyApply: boolean | null }) => {
         <span className="tag external">external site</span>
     );
 };
+
+/** A malformed address is shown as it stands: worth seeing, not worth failing the row over. */
+const host = (url: string) => {
+    try {
+        return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+        return url;
+    }
+};
+
+/**
+ * Where the Apply button leads outside LinkedIn, and the box to paste it into.
+ *
+ * The paid lookup that used to fill this column stopped answering on 2026-08-13, so the address
+ * now arrives the only way left: she opens the posting, presses Apply, and pastes where it landed.
+ * The box is always there rather than appearing on a click, because an empty cell that hides an
+ * input reads as "nothing can be done here" - which was true yesterday and is the whole point of
+ * the change.
+ *
+ * Once set, the host shows above the box as a link: it alone says which form is waiting - the
+ * company's own site or one of the usual ATS - while the full address stays in the box, where it
+ * can be corrected and where the title attribute shows it in full.
+ */
+const ApplyLinkCell = ({
+    applyUrl,
+    company,
+    onCommit,
+}: {
+    applyUrl: string;
+    company: string;
+    onCommit: (applyUrl: string) => void;
+}) => (
+    <div className="apply-cell">
+        {applyUrl && (
+            <a
+                className="apply-link"
+                href={applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={applyUrl}
+            >
+                {host(applyUrl)}
+            </a>
+        )}
+        <DebouncedInput
+            className="apply-input"
+            ariaLabel={`Apply link for ${company}`}
+            placeholder="paste apply link"
+            value={applyUrl}
+            onCommit={onCommit}
+        />
+    </div>
+);
 
 /**
  * Which CV goes out. "tailored" sits in the company folder of the core it was built from, "core CV"
@@ -133,7 +187,17 @@ export const VacancyTable = ({
                         </select>
                     </td>
                     <td>
-                        <NoteInput
+                        <ApplyLinkCell
+                            applyUrl={vacancy.applyUrl}
+                            company={vacancy.company}
+                            onCommit={(applyUrl) => onUpdate(vacancy.url, { applyUrl })}
+                        />
+                    </td>
+                    <td>
+                        <DebouncedInput
+                            className="note"
+                            ariaLabel={`Note for ${vacancy.company}`}
+                            placeholder="..."
                             value={vacancy.note}
                             onCommit={(note) => onUpdate(vacancy.url, { note })}
                         />

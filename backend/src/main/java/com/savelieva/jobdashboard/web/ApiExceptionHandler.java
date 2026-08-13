@@ -1,6 +1,7 @@
 package com.savelieva.jobdashboard.web;
 
 import com.savelieva.jobdashboard.repository.StatusRepository.UnknownPostingException;
+import com.savelieva.jobdashboard.service.VacancyService.InvalidApplyUrlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -60,6 +61,17 @@ public class ApiExceptionHandler {
         log.info("{}", e.getMessage());
         return text(HttpStatus.NOT_FOUND,
                 "вакансия не найдена в базе: обновите страницу");
+    }
+
+    /**
+     * The apply link box got something that is not a link. Her mistake to see and fix, not a
+     * server fault: the board shows the message next to the table.
+     */
+    @ExceptionHandler(InvalidApplyUrlException.class)
+    public ResponseEntity<String> invalidApplyUrl(InvalidApplyUrlException e) {
+        log.info("{}", e.getMessage());
+        return text(HttpStatus.BAD_REQUEST,
+                "это не ссылка: адрес должен начинаться с http:// или https://");
     }
 
     private ResponseEntity<String> text(HttpStatus status, String body) {

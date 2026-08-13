@@ -88,8 +88,11 @@ public class StatusRepository {
      * The trailing part of the url, which is how every part of this project names a posting: the
      * loader derives it the same way, and the alter script derived it the same way when it moved
      * the old marks over.
+     *
+     * <p>Shared with {@link JdbcVacancyRepository}, which writes the pasted apply link and has to
+     * name the posting identically. Spelling the same rule twice is how the two would drift.
      */
-    private String jobId(String url) {
+    static String jobId(String url) {
         String trimmed = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         int cut = trimmed.lastIndexOf('/');
         return cut < 0 ? trimmed : trimmed.substring(cut + 1);

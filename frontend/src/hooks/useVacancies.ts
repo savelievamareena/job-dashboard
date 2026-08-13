@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchVacancies, saveStatus } from "@/api/vacancies";
+import { fetchVacancies, saveApplyUrl, saveStatus } from "@/api/vacancies";
 import type { Vacancy } from "@/types";
 
 type State = {
@@ -9,7 +9,7 @@ type State = {
     error: string | null;
 };
 
-type Patch = Partial<Pick<Vacancy, "status" | "note">>;
+type Patch = Partial<Pick<Vacancy, "status" | "note" | "applyUrl">>;
 
 const INITIAL: State = { vacancies: [], statuses: [], loading: true, error: null };
 
@@ -65,12 +65,27 @@ export const useVacancies = () => {
         // Status and note belong to the posting, not to the sighting, so either row answers.
         const next = { ...current, ...patch };
 
-        saveStatus(url, next.status, next.note).catch((error: unknown) =>
+        const failed = (fallback: string) => (error: unknown) => {
             setState((state) => ({
                 ...state,
-                error: error instanceof Error ? error.message : "cannot save the status",
-            })),
-        );
+                error: error instanceof Error ? error.message : fallback,
+            }));
+            // The row was already patched optimistically, so a rejected save would leave the table
+            // showing a value the database does not hold. Put back what the row said before.
+            rows.current = rows.current.map((vacancy) =>
+                vacancy.url === url ? { ...vacancy, ...current } : vacancy,
+            );
+            setState((state) => ({ ...state, vacancies: rows.current }));
+        };
+
+        // Two writes, two tables: the apply link is a column of `vacancy`, the mark lives in
+        // job_status. Sending one when only the other changed would rewrite a value nobody edited.
+        if (patch.applyUrl !== undefined) {
+            saveApplyUrl(url, next.applyUrl).catch(failed("cannot save the apply link"));
+            return;
+        }
+
+        saveStatus(url, next.status, next.note).catch(failed("cannot save the status"));
     }, []);
 
     return { ...state, update };

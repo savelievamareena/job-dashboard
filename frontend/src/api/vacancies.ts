@@ -20,3 +20,20 @@ export const saveStatus = async (url: string, status: string, note: string): Pro
         await failed(response);
     }
 };
+
+/**
+ * Its own request rather than a field on the status one: these two write different tables. The
+ * status lives in job_status, which belongs to this application; the apply link is a column of
+ * vacancy, which the loader owns and only leaves alone because it has nothing to say about it.
+ */
+export const saveApplyUrl = async (url: string, applyUrl: string): Promise<void> => {
+    const response = await fetch("/api/vacancies/apply-url", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, applyUrl }),
+    });
+
+    if (!response.ok) {
+        await failed(response);
+    }
+};

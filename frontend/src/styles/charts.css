@@ -95,11 +95,48 @@ nav.pages a[aria-current="page"] {
     font-size: 13px;
 }
 
+/*
+ * One column, half the width, centred. The cards used to sit side by side in as many columns as
+ * fit, which on a wide screen gave each one a short wide plot - the shape that flattens the very
+ * slopes these lines exist to show.
+ *
+ * The floor is not decoration. At a plain 50% a phone would get a 170px plot, narrower than the
+ * dated axis needs, so the width never drops below 420px; max-width then keeps that floor from
+ * pushing past the edge of a screen narrower than the floor itself.
+ *
+ * The width lives on the wrapper rather than on the cards, so the period picker above them is the
+ * same column and lines up with the card edges instead of floating off to the left of the page.
+ */
+.stats {
+    width: max(50%, 420px);
+    max-width: 100%;
+    margin-inline: auto;
+}
+
 .charts {
     display: grid;
     gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
+}
+
+.periods {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+/* Reads as the page tabs above it, because it does the same thing: one of these is the view. */
+.periods button {
+    cursor: pointer;
+    border-color: transparent;
+    opacity: 0.6;
+}
+
+.periods button[aria-pressed="true"] {
+    background: #8882;
+    border-color: var(--muted);
+    opacity: 1;
 }
 
 .card {

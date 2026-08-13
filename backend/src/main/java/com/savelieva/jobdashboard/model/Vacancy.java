@@ -16,6 +16,10 @@ package com.savelieva.jobdashboard.model;
  * <p>{@code stack} is always empty and kept only because the board still renders the field. The
  * column it came from disappeared from jobs.csv, and the language the loader stores instead just
  * repeats the track for every picked posting.
+ *
+ * <p>{@code applyUrl} is where the Apply button leads outside LinkedIn, and it is empty for almost
+ * every posting: it comes from a separate paid subscription and is filled one named posting at a
+ * time, so empty means nobody has asked yet rather than "there is no link".
  */
 public record Vacancy(
         String date,
@@ -26,6 +30,7 @@ public record Vacancy(
         String url,
         String stack,
         Boolean easyApply,
+        String applyUrl,
         String level,
         String jobType,
         String location,
@@ -38,14 +43,14 @@ public record Vacancy(
 
     /** Returns a copy carrying the status and note the dashboard has stored for this posting. */
     public Vacancy withStatus(JobStatus jobStatus) {
-        return new Vacancy(date, source, track, company, title, url, stack, easyApply, level,
-                jobType, location, applicants, gap, hasText, cv,
+        return new Vacancy(date, source, track, company, title, url, stack, easyApply, applyUrl,
+                level, jobType, location, applicants, gap, hasText, cv,
                 jobStatus.status(), jobStatus.note());
     }
 
     /** Returns a copy carrying the CV built for this company, null while none has been. */
     public Vacancy withCv(CvKind kind) {
-        return new Vacancy(date, source, track, company, title, url, stack, easyApply, level,
-                jobType, location, applicants, gap, hasText, kind, status, note);
+        return new Vacancy(date, source, track, company, title, url, stack, easyApply, applyUrl,
+                level, jobType, location, applicants, gap, hasText, kind, status, note);
     }
 }

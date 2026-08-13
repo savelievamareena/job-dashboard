@@ -17,8 +17,9 @@ import org.springframework.stereotype.Repository;
  * <p>One posting is one row here, where the folders held one row per sighting. A posting picked on
  * two days was two rows on the old board; it is one now, dated by the later pick.
  *
- * <p>Read only. Marks are written by {@link StatusRepository}, and everything else in this table
- * belongs to the loader.
+ * <p>Read only but for one column: apply_url, which the board lets her paste into because the paid
+ * lookup that used to fill it stopped answering. Marks are written by {@link StatusRepository}, and
+ * everything else in this table belongs to the loader.
  */
 @Repository
 public class JdbcVacancyRepository implements VacancyRepository {
@@ -37,7 +38,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final String SELECTED = """
             select coalesce(selected_date, found_date) as date,
                    source, track, company, title, url,
-                   easy_apply, level, job_type, location, applicants, gap, has_text
+                   easy_apply, apply_url, level, job_type, location, applicants, gap, has_text
             from vacancy
             where is_selected
             order by coalesce(selected_date, found_date) desc, lower(company)
@@ -48,9 +49,11 @@ public class JdbcVacancyRepository implements VacancyRepository {
      * expects. getObject on easy_apply keeps a missing flag apart from a known "no": getBoolean
      * would turn both into false, and the board draws them differently.
      *
-     * <p>Everything else that can be null becomes an empty string. company, title and gap are
-     * nullable columns, while the reader this replaced could only ever produce text, so leaving
-     * the null through would put a JSON null where the board has always had "".
+     * <p>Everything else that can be null becomes an empty string. company, title, gap and
+     * apply_url are nullable columns, while the reader this replaced could only ever produce text,
+     * so leaving the null through would put a JSON null where the board has always had "". Unlike
+     * easy_apply, apply_url loses nothing that way: the column has one missing state, "nobody has
+     * paid to ask yet", and no value for "there is no link".
      */
     private static final RowMapper<Vacancy> VACANCY = (rs, row) -> new Vacancy(
             rs.getString("date"),
@@ -61,6 +64,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
             text(rs.getString("url")),
             "",
             rs.getObject("easy_apply", Boolean.class),
+            text(rs.getString("apply_url")),
             text(rs.getString("level")),
             text(rs.getString("job_type")),
             text(rs.getString("location")),
@@ -70,6 +74,8 @@ public class JdbcVacancyRepository implements VacancyRepository {
             null,
             "",
             "");
+
+    private static final String SAVE_APPLY_URL = "update vacancy set apply_url = ? where job_id = ?";
 
     private static String text(String value) {
         return value == null ? "" : value;
@@ -84,5 +90,25 @@ public class JdbcVacancyRepository implements VacancyRepository {
     @Override
     public List<Vacancy> findSelected() {
         return jdbc.query(SELECTED, VACANCY);
+    }
+
+    /**
+     * The one column of this table the board writes, and it survives the loader by luck of a
+     * coalesce rather than by being off limits to it: migrate.py updates
+     * {@code apply_url = coalesce(excluded.apply_url, v.apply_url)}, and `excluded` is null unless
+     * a cached {@code _descriptions/<id>.json} carries an address. Nothing writes that file except
+     * li_applyurl.py, so a pasted link stays until the paid lookup answers for the same posting -
+     * at which point the provider's answer is the newer fact and should win.
+     *
+     * <p>Written straight to `vacancy` rather than to a table of its own because the board, the
+     * loader and the paid lookup all mean the same thing by this column, and a second home for it
+     * would need a rule about which one the page shows.
+     */
+    @Override
+    public void saveApplyUrl(String url, String applyUrl) {
+        String value = applyUrl == null || applyUrl.isBlank() ? null : applyUrl.strip();
+        if (jdbc.update(SAVE_APPLY_URL, value, StatusRepository.jobId(url)) == 0) {
+            throw new StatusRepository.UnknownPostingException(url);
+        }
     }
 }

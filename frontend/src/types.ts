@@ -9,6 +9,12 @@ export type Vacancy = {
     stack: string;
     /** null when the cached record predates the flag: unknown, which is not the same as "no". */
     easyApply: boolean | null;
+    /**
+     * Where the Apply button leads outside LinkedIn. Empty means nobody has filled it in yet, not
+     * "there is no link". It used to come only from a paid lookup; that provider stopped answering
+     * on 2026-08-13, so the board is now where it gets typed in by hand.
+     */
+    applyUrl: string;
     level: string;
     jobType: string;
     location: string;
@@ -35,7 +41,8 @@ export type SortKey =
     | "easyApply"
     | "level"
     | "cv"
-    | "status";
+    | "status"
+    | "applyUrl";
 
 export type Filters = {
     date: string;
@@ -58,6 +65,13 @@ export type TrendPoint = {
     series: string;
     count: number;
 };
+
+/**
+ * How far back the statistics page looks. The window ends today, not on the last day the loader
+ * ran, so "неделя" is the last seven calendar days and a week without a search run is an empty
+ * chart rather than the last seven days that happen to carry data.
+ */
+export type Period = "week" | "month" | "half-year" | "year";
 
 export type Statistics = {
     language: TrendPoint[];

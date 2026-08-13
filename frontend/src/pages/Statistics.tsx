@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChartCard } from "@/components/charts/ChartCard";
+import { caption, PeriodPicker, since } from "@/components/charts/PeriodPicker";
 import { TrendChart, type TrendRow, type TrendSeries } from "@/components/charts/TrendChart";
 import { useStatistics } from "@/hooks/useStatistics";
-import type { TrendPoint } from "@/types";
+import type { Period, TrendPoint } from "@/types";
 
 /**
  * Fixed series lists, in palette order. A series keeps its colour whatever the data does, and a
@@ -120,6 +121,15 @@ const toChart = (points: TrendPoint[], series: string[], scanDays: string[]) => 
 
 const total = (points: TrendPoint[]) => points.reduce((sum, point) => sum + point.count, 0);
 
+/** 1 вакансия, 2 вакансии, 5 вакансий: a short window makes the small numbers reachable. */
+const PLURAL = new Intl.PluralRules("ru-RU");
+const FORMS: Record<string, string> = { one: "вакансия", few: "вакансии" };
+const counted = (count: number) => `${count} ${FORMS[PLURAL.select(count)] ?? "вакансий"}`;
+
+/** "157 вакансий с определённым слоем за последний месяц, по дню публикации." */
+const cardCaption = (count: number, period: Period, qualifier = "") =>
+    `${counted(count)}${qualifier} ${caption(period)}, по дню публикации.`;
+
 /**
  * One trend has data while the others do not - ai_kind, say, which the parser writes on far
  * fewer postings than language. An empty plot with axes still reads as a measured zero, so that
@@ -127,41 +137,64 @@ const total = (points: TrendPoint[]) => points.reduce((sum, point) => sum + poin
  */
 const Chart = ({ chart }: { chart: ReturnType<typeof toChart> }) =>
     chart.series.length === 0 ? (
-        <p className="empty">по этому срезу в базе пока нет размеченных вакансий</p>
+        <p className="empty">по этому срезу за выбранный период нет размеченных вакансий</p>
     ) : (
         <TrendChart rows={chart.rows} series={chart.series} />
     );
 
 export const Statistics = () => {
     const { statistics, loading, error } = useStatistics();
+    // A month by default: long enough to show a trend rather than this week's noise, short enough
+    // that every point still has its own slot on a dated axis.
+    const [period, setPeriod] = useState<Period>("month");
 
-    const view = useMemo(
-        () =>
-            statistics && {
-                language: toChart(statistics.language, LANGUAGES, statistics.scanDays),
-                layer: toChart(statistics.layer, LAYERS, statistics.scanDays),
-                ai: toChart(statistics.ai, AI_KINDS, statistics.scanDays),
-                counted: {
-                    language: total(statistics.language),
-                    layer: total(statistics.layer),
-                    ai: total(statistics.ai),
-                },
+    /*
+     * The window is applied here rather than by the API. Everything the page has is already in
+     * memory - one request loads the whole history, and a year of it is three arrays of a few
+     * thousand short rows - so switching the period is a filter over what is already loaded and
+     * costs no round trip.
+     *
+     * The scan days are cut to the same window. toChart only ever asks about days it is drawing,
+     * so this changes nothing today; it keeps the two halves of one window from drifting apart,
+     * which is what the zero-versus-gap distinction is decided from.
+     */
+    const view = useMemo(() => {
+        if (!statistics) {
+            return null;
+        }
+
+        const from = since(period);
+        const within = (points: TrendPoint[]) => points.filter((point) => point.day >= from);
+        const scanDays = statistics.scanDays.filter((day) => day >= from);
+        const language = within(statistics.language);
+        const layer = within(statistics.layer);
+        const ai = within(statistics.ai);
+
+        return {
+            language: toChart(language, LANGUAGES, scanDays),
+            layer: toChart(layer, LAYERS, scanDays),
+            ai: toChart(ai, AI_KINDS, scanDays),
+            counted: {
+                language: total(language),
+                layer: total(layer),
+                ai: total(ai),
             },
-        [statistics],
-    );
+        };
+    }, [statistics, period]);
 
     if (loading) {
         return <p className="empty">loading...</p>;
     }
 
-    if (error || !view) {
+    if (error || !view || !statistics) {
         return <p className="error">{error ?? "cannot load the statistics"}</p>;
     }
 
     // A 200 with three empty arrays is a real state, not a hypothetical one: the schema can be
     // applied without the loader having run since. Three blank charts would read as "nothing was
-    // posted", so it has to be said in words instead.
-    if (view.counted.language + view.counted.layer + view.counted.ai === 0) {
+    // posted", so it has to be said in words instead. Measured on the whole answer, not on the
+    // window: an empty month says nothing about whether the loader has ever run.
+    if (total(statistics.language) + total(statistics.layer) + total(statistics.ai) === 0) {
         return (
             <p className="banner">
                 В базе нет данных для графиков. Прогоните загрузчик:{" "}
@@ -171,28 +204,43 @@ export const Statistics = () => {
         );
     }
 
+    const shown = view.counted.language + view.counted.layer + view.counted.ai;
+
     return (
-        <div className="charts">
-            <ChartCard
-                title="Языки программирования"
-                caption={`${view.counted.language} вакансий, по дню публикации.`}
-            >
-                <Chart chart={view.language} />
-            </ChartCard>
+        <div className="stats">
+            <PeriodPicker period={period} onChange={setPeriod} />
 
-            <ChartCard
-                title="Frontend, backend, fullstack"
-                caption={`${view.counted.layer} вакансий с определённым слоем, по дню публикации.`}
-            >
-                <Chart chart={view.layer} />
-            </ChartCard>
+            {/* The base has data, this window has none: a different fact, and the way out of it is
+                the picker right above, so the page keeps it and says which one is empty. */}
+            {shown === 0 ? (
+                <p className="banner">
+                    За выбранный период вакансий нет. Возьмите период подлиннее или прогоните
+                    загрузчик.
+                </p>
+            ) : (
+                <div className="charts">
+                    <ChartCard
+                        title="Языки программирования"
+                        caption={cardCaption(view.counted.language, period)}
+                    >
+                        <Chart chart={view.language} />
+                    </ChartCard>
 
-            <ChartCard
-                title="AI и ML"
-                caption={`${view.counted.ai} вакансий с проставленным ai_kind, по дню публикации.`}
-            >
-                <Chart chart={view.ai} />
-            </ChartCard>
+                    <ChartCard
+                        title="Frontend, backend, fullstack"
+                        caption={cardCaption(view.counted.layer, period, " с определённым слоем")}
+                    >
+                        <Chart chart={view.layer} />
+                    </ChartCard>
+
+                    <ChartCard
+                        title="AI и ML"
+                        caption={cardCaption(view.counted.ai, period, " с проставленным ai_kind")}
+                    >
+                        <Chart chart={view.ai} />
+                    </ChartCard>
+                </div>
+            )}
         </div>
     );
 };

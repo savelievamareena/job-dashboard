@@ -12,4 +12,11 @@ public interface VacancyRepository {
 
     /** All picked postings, newest pick first. Marks and CVs are not filled in here. */
     List<Vacancy> findSelected();
+
+    /**
+     * Stores where the Apply button leads, as pasted on the board. Null or blank clears it.
+     *
+     * @throws StatusRepository.UnknownPostingException when no posting carries this url
+     */
+    void saveApplyUrl(String url, String applyUrl);
 }

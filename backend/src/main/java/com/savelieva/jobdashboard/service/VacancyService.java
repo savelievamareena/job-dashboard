@@ -55,4 +55,38 @@ public class VacancyService {
         statuses.save(url, status);
         return status;
     }
+
+    /**
+     * Stores the address behind the Apply button, as pasted on the board.
+     *
+     * <p>Validated here rather than at the edge because the column is read as a link: an address
+     * the browser cannot open is worse than an empty cell, which at least reads as "nobody has
+     * looked yet". Blank clears the cell, and clearing is always allowed.
+     *
+     * @throws InvalidApplyUrlException when the text is not an absolute http(s) address
+     */
+    public String updateApplyUrl(String url, String applyUrl) {
+        String value = applyUrl == null ? "" : applyUrl.strip();
+        if (!value.isEmpty() && !isHttpUrl(value)) {
+            throw new InvalidApplyUrlException(value);
+        }
+        vacancies.saveApplyUrl(url, value);
+        return value;
+    }
+
+    private static boolean isHttpUrl(String value) {
+        try {
+            String scheme = java.net.URI.create(value).getScheme();
+            return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** What arrived in the apply link box was not a link. */
+    public static class InvalidApplyUrlException extends RuntimeException {
+        public InvalidApplyUrlException(String value) {
+            super("not an http(s) address: " + value);
+        }
+    }
 }
