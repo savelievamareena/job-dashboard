@@ -309,6 +309,10 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         "gap": column(selected, "gap") or None,
                         "source": source or None,
                         "easy_apply": easy_apply(record),
+                        # Written into the cached record by /get-apply-link, one named posting at
+                        # a time. Absent for almost every posting, and that is the normal state:
+                        # null here means nobody has paid to ask yet.
+                        "apply_url": text(record, "apply_url") or None,
                         "level": text(record, "experience_level") or None,
                         "job_type": text(record, "job_type") or None,
                         "location": first_non_blank(text(record, "location"),
@@ -357,13 +361,15 @@ def collect_cv_queue(root_dir: Path) -> list:
 
 SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "language", "layer", "ai_kind",
                     "posted_at", "found_date", "is_selected", "selected_date", "gap", "source",
-                    "easy_apply", "level", "job_type", "location", "applicants", "has_text"]
+                    "easy_apply", "apply_url", "level", "job_type", "location", "applicants",
+                    "has_text"]
 
 # Everything the newest sighting answers for. found_date, selected_date, is_selected and has_text
 # are aggregated instead: the first is the earliest sighting, the second the latest pick, the
 # other two are ever-true.
 LATEST = ["url", "company", "title", "track", "language", "layer", "ai_kind", "posted_at",
-          "gap", "source", "easy_apply", "level", "job_type", "location", "applicants"]
+          "gap", "source", "easy_apply", "apply_url", "level", "job_type", "location",
+          "applicants"]
 BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
 # What the SEARCH owns. li_search.py works these out from the title and the description and writes
 # them to `vacancy` itself, before any filtering; this loader only ever saw the folder a posting
@@ -421,6 +427,7 @@ create temp table vacancy_load (
     gap         text,
     source      text,
     easy_apply  boolean,
+    apply_url   text,
     level       text,
     job_type    text,
     location    text,

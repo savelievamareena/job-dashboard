@@ -175,8 +175,15 @@ create index cv_queue_company_idx on cv_queue (core, lower(company));
 -- Coalesce is not optional. posted_at only arrived with the recent columns, so most rows
 -- have none and the scan date is the only date they have; that share falls with every run.
 
--- The AI track is excluded because it is a cut of the same market by subject rather than by
--- language: leaving it in would count its postings twice, once here and once in trend_ai.
+-- The AI track used to be excluded here, on the reasoning that it is a cut of the same market
+-- by subject rather than by language and leaving it in would count its postings twice, once
+-- here and once in trend_ai. She corrected that 2026-08-13: an AI-track Python posting is not a
+-- separate thing from Python demand, it is PART of Python demand - "AI спрос на питон растёт, а
+-- питон нет" is not a coherent pair of facts, and dropping AI rows here made the language curve
+-- read as flat or shrinking while the real total (ordinary + AI) was rising, exactly the kind of
+-- gap that would wrongly tell her a language isn't worth learning. trend_ai still exists and
+-- still answers its own question (is AI hiring growing) - it is not a partition of this view,
+-- it is a different lens on an overlapping set of rows, and both are allowed to move together.
 --
 -- ruby (2026-08-10) and php (2026-08-12) are languages she stopped tracking, so the search no
 -- longer asks for them by name. Both still ARRIVE - through "backend" and the catch-alls - and
@@ -186,7 +193,7 @@ create index cv_queue_company_idx on cv_queue (core, lower(company));
 create view trend_language as
 select coalesce(posted_at::date, found_date) as day, language as series, count(*)::int as count
 from vacancy
-where track <> 'ai' and language is not null and language not in ('ruby', 'php')
+where language is not null and language not in ('ruby', 'php')
 group by 1, 2
 order by 1, 2;
 
