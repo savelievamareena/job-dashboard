@@ -8,6 +8,11 @@ import type { TrendPoint } from "@/types";
  * Fixed series lists, in palette order. A series keeps its colour whatever the data does, and a
  * value outside the list folds into the last slot rather than taking a ninth hue nobody can tell
  * from the eight already on screen.
+ *
+ * `php` is a retired slot, kept on purpose since 2026-08-12: `trend_language` stopped returning
+ * it, so it already draws nothing (a series that never appears is dropped below), and deleting
+ * the name here would slide go, python, csharp and other one colour to the left for no reason
+ * anyone reading the chart could account for. Position, not membership, is what picks the hue.
  */
 const LANGUAGES = ["javascript", "java", "php", "go", "python", "csharp", "other"];
 /**

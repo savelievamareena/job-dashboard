@@ -98,6 +98,11 @@ create table vacancy (
     -- these today, so the table has to carry them for it to ever move off the files.
     source      text not null default '',
     easy_apply  boolean,             -- null is "not known" which the board shows as "?"
+    -- Where the Apply button leads, from LinkedIn's own applyMethod. Null is "nobody has asked
+    -- yet", not "there is no link": it comes from a separate paid subscription with 50 requests a
+    -- month, so it is filled one named posting at a time and never in bulk. See
+    -- alter-2026-08-12-apply-url.sql.
+    apply_url   text,
     level       text not null default '',
     job_type    text not null default '',
     location    text not null default '',
@@ -172,10 +177,16 @@ create index cv_queue_company_idx on cv_queue (core, lower(company));
 
 -- The AI track is excluded because it is a cut of the same market by subject rather than by
 -- language: leaving it in would count its postings twice, once here and once in trend_ai.
+--
+-- ruby (2026-08-10) and php (2026-08-12) are languages she stopped tracking, so the search no
+-- longer asks for them by name. Both still ARRIVE - through "backend" and the catch-alls - and
+-- are still stored with their real language, because a row deleted at write time cannot be got
+-- back. They are kept off the chart rather than out of the table, which is why this is a
+-- filter here and not a rule in the skill.
 create view trend_language as
 select coalesce(posted_at::date, found_date) as day, language as series, count(*)::int as count
 from vacancy
-where track <> 'ai' and language is not null and language <> 'ruby'
+where track <> 'ai' and language is not null and language not in ('ruby', 'php')
 group by 1, 2
 order by 1, 2;
 
