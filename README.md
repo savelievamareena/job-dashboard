@@ -94,10 +94,16 @@ are read. A missing Easy Apply flag shows as `?`, which is not the same as "exte
 never a count, and reading it literally overwrote real applicant numbers with a nought.
 
 One row in the database is one posting, not one sighting of it. A posting found again on a later
-day updates its row, so the board shows it once however many days it kept turning up. Two dates
-are kept and they are not the same: `found_date` is the day it was first seen, which the trend
-charts count by, and `selected_date` is the day it was picked, which is the date the board shows.
-A posting is often found on one day and picked the next.
+day updates its row, so the board shows it once however many days it kept turning up. Both the
+board and the trend charts date a posting by when it went up before anything else:
+`posted_at`, which only reaches back to 2026-08-09. Past that they diverge one step: the charts
+fall straight back to `found_date`, the day it was first seen; the board takes one more step
+first, `selected_date`, the day it was picked - a posting picked before `posted_at` existed should
+still show the day she chose it, not the day some later scan happened to notice it again.
+`selected_date` was dropped once on 2026-08-15 for reading no purpose once the board stopped
+showing it first, then brought back the same day, narrower, once that turned out to be the wrong
+call for the postings `posted_at` cannot reach: a stopgap, gone again once every picked posting
+carries its own `posted_at`.
 
 The board is only as fresh as the last loader run. That is the trade for a page that never opens a
 file or spends an API credit while rendering.

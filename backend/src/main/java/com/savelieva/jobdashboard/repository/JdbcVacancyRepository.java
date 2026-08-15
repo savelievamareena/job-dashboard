@@ -25,10 +25,14 @@ import org.springframework.stereotype.Repository;
 public class JdbcVacancyRepository implements VacancyRepository {
 
     /**
-     * selected_date is the day the posting was picked, which is the date the board has always
-     * shown. found_date is the day it was first seen, which is what the trend charts count by and
-     * is often a day earlier. The coalesce covers a posting whose selected.csv line is gone: the
-     * flag outlives the line, so the first sighting is the only date left to show.
+     * The board shows a posting by when it went up, the same date the trend charts count by -
+     * same first two steps of the coalesce, same reason: posted_at only arrived with the recent
+     * columns, so an older posting has none of its own to show. Where the charts fall straight
+     * back to found_date, the board takes one more step first: selected_date, the day the posting
+     * was picked. posted_at only reaches back to 2026-08-09, so without that step a posting
+     * picked before then showed the day the SCAN happened to run rather than any date about the
+     * posting or the pick - worse than the pick date it replaced. See schema.sql for why
+     * selected_date exists again after being dropped earlier the same day.
      *
      * <p>The stack column is not read. It was always blank on the board, because the newer
      * jobs.csv dropped the column it came from, and the language the loader stores instead is not
@@ -36,12 +40,12 @@ public class JdbcVacancyRepository implements VacancyRepository {
      * and fullstack to java. Filling the cell with that would add a second track column.
      */
     private static final String SELECTED = """
-            select coalesce(selected_date, found_date) as date,
+            select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, track, company, title, url,
                    easy_apply, apply_url, level, job_type, location, applicants, gap, has_text
             from vacancy
             where is_selected
-            order by coalesce(selected_date, found_date) desc, lower(company)
+            order by coalesce(posted_at::date, selected_date, found_date) desc, lower(company)
             """;
 
     /**

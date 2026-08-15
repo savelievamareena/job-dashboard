@@ -303,8 +303,8 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         "posted_at": column(job, "posted") or None,
                         "found_date": day.name,
                         "is_selected": selected is not None,
-                        # The day this sighting was picked, null when it was only found. The
-                        # board shows this rather than found_date; see schema.sql.
+                        # A fallback only, for the board's posted_at gap - see schema.sql. The day
+                        # this sighting was picked, null when it was only found.
                         "selected_date": day.name if selected is not None else None,
                         "gap": column(selected, "gap") or None,
                         "source": source or None,

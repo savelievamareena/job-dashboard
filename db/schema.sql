@@ -82,15 +82,15 @@ create table vacancy (
     -- of the folders must not quietly lose the decision to apply to it. Clear it by hand.
     is_selected boolean not null default false,
 
-    -- The day the posting was picked, which is the date the board shows in its first column.
-    -- Deliberately not found_date: a posting is often found on one day and picked the next, and
-    -- eight of the seventy-eight picked rows differ that way today. found_date cannot be
-    -- redefined to mean this, because the trend charts count a posting on the day it was first
-    -- seen, so the two dates have to live side by side.
+    -- A FALLBACK, not the board's answer: the board orders by
+    -- coalesce(posted_at::date, selected_date, found_date). posted_at only starts on 2026-08-09,
+    -- so without this a posting picked before that date showed the day the scan happened to run
+    -- rather than any date about the posting - worse than showing the day she actually picked it.
     --
-    -- The latest day it was picked, so a posting picked again carries the current decision.
-    -- Null where is_selected is true but no selected.csv line is left to say when: the flag is
-    -- never lowered, so it outlives the line. The board falls back to found_date there.
+    -- Dropped for one afternoon on 2026-08-15, then brought back narrower the same day once that
+    -- showed up on the board: it stopped being the board's primary date, but the picks made
+    -- before posted_at existed still needed a real fallback ahead of found_date. Stopgap on
+    -- purpose - see alter-2026-08-15-restore-selected-date-as-fallback.sql for when to remove it.
     selected_date date,
     gap         text,                -- from selected.csv
 
@@ -110,10 +110,13 @@ create table vacancy (
     has_text    boolean not null default false
 );
 
--- Matches the board's one query, ordering included: newest pick first, then company ignoring
--- case. The coalesce has to be repeated here or the index does not answer that order.
+-- Matches the board's one query, ordering included: newest posting first, then company ignoring
+-- case, falling back to the day it was picked and then the day it was found for the postings
+-- that predate posted_at. The coalesce has to be repeated here or the index does not answer that
+-- order.
 create index vacancy_board_idx
-    on vacancy (coalesce(selected_date, found_date) desc, lower(company)) where is_selected;
+    on vacancy (coalesce(posted_at::date, selected_date, found_date) desc, lower(company))
+    where is_selected;
 create index vacancy_language_idx on vacancy (found_date, language) where language is not null;
 create index vacancy_layer_idx on vacancy (found_date, layer) where layer is not null;
 create index vacancy_ai_idx on vacancy (found_date, ai_kind) where ai_kind is not null;
