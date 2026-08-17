@@ -57,7 +57,7 @@ export const EMPTY_FILTERS: Filters = { date: "", track: "", easyApply: "", stat
 /**
  * One point of a trend view. All three views share this shape, so one chart reads any of them.
  *
- * @see db/schema.sql - trend_language, trend_layer, trend_ai
+ * @see db/reset-schema.sql - trend_language, trend_layer, trend_ai
  */
 export type TrendPoint = {
     /** The day a posting was first seen; a posting counts once, on that day. */
@@ -81,7 +81,7 @@ export type Statistics = {
      * Days a search actually ran. A day missing here is a day nobody looked, which is drawn as a
      * break in the line: a zero there would read as "nothing was posted".
      *
-     * @see db/schema.sql - scan_day
+     * @see db/reset-schema.sql - scan_day
      */
     scanDays: string[];
 };

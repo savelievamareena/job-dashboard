@@ -13,7 +13,9 @@ services:
       # mounting /var/lib/postgresql/data is the pre-18 layout and refuses to start.
       - pgdata:/var/lib/postgresql
     ports:
-      - 5432:5432
+      # Bound to loopback only: this password is the fixed "postgres" default above, not a
+      # secret, so the port must never reach the LAN or the internet.
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d jobdashboard"]
       interval: 5s

@@ -1,6 +1,7 @@
--- Brings a database created by the earlier schema.sql up to the shape the board needs, without
--- dropping anything. schema.sql itself cannot be re-run here: it starts by dropping vacancy, and
--- vacancy holds the whole find rather than a cache of it.
+-- Brings a database created by the earlier schema.sql (renamed reset-schema.sql on 2026-08-15) up
+-- to the shape the board needs, without dropping anything. reset-schema.sql itself cannot be
+-- re-run here: it starts by dropping vacancy, and vacancy holds the whole find rather than a
+-- cache of it.
 --
 -- Two changes, both from moving the board off the files and onto this database:
 --

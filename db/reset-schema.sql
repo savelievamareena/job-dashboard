@@ -18,14 +18,42 @@
 -- case, so an isSelected in a query silently becomes isselected and finds nothing. The app
 -- renames at the edge instead — select is_selected as "isSelected".
 --
--- Run with:  psql -v ON_ERROR_STOP=1 -f db/schema.sql
+-- Run with:  psql -v ON_ERROR_STOP=1 -f db/reset-schema.sql
 --
 -- ONLY on an empty database. The drop below takes vacancy with it, and vacancy holds the whole
 -- find, not a cache of it: the dated folders are cleaned up over time, so what is dropped here
 -- cannot always be reloaded. To change the shape of a database already in use, write an alter
 -- script next to this file instead and apply that; see db/alter-2026-08-11-board-on-db.sql.
+-- Named reset- rather than the plain "schema" it started as, so that what it does is in the
+-- filename and not just this comment.
+--
+-- To start over anyway, back up first:
+--   docker compose exec -T db pg_dump -U postgres -d jobdashboard > backup.sql
+-- and restore with:
+--   docker compose exec -T db psql -U postgres -d jobdashboard -v ON_ERROR_STOP=1 < backup.sql
 
 begin;
+
+-- Refuses to run against a database that already has postings, so this can never be the
+-- accidental second command in a copy-pasted setup block. vacancy is checked, not job_status:
+-- job_status has a foreign key onto vacancy, so an empty vacancy table means job_status is
+-- empty too, but a database mid-migration could have a vacancy row and no marks yet.
+do $$
+declare
+    existing_rows bigint;
+begin
+    if exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+               where n.nspname = 'public' and c.relname = 'vacancy' and c.relkind = 'r')
+    then
+        select count(*) into existing_rows from vacancy;
+        if existing_rows > 0 then
+            raise exception 'reset-schema.sql refuses to run: vacancy already has % row(s). '
+                'This script drops and rebuilds vacancy, job_status and cv_queue from scratch. '
+                'Back up first (see the header of this file), or if the shape just needs to '
+                'change, write an alter script instead.', existing_rows;
+        end if;
+    end if;
+end $$;
 
 -- cascade so the views go with the table: they are recreated at the bottom of this file, and
 -- naming them here would miss any that an earlier version of the schema left behind.

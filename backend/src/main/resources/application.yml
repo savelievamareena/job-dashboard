@@ -1,4 +1,7 @@
 server:
+  # Loopback only: there is no authentication in front of the API, so anything reaching this
+  # port can read every posting and note and change statuses.
+  address: 127.0.0.1
   port: 8765
 
 spring:

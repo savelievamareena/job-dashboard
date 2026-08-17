@@ -31,7 +31,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
      * back to found_date, the board takes one more step first: selected_date, the day the posting
      * was picked. posted_at only reaches back to 2026-08-09, so without that step a posting
      * picked before then showed the day the SCAN happened to run rather than any date about the
-     * posting or the pick - worse than the pick date it replaced. See schema.sql for why
+     * posting or the pick - worse than the pick date it replaced. See reset-schema.sql for why
      * selected_date exists again after being dropped earlier the same day.
      *
      * <p>The stack column is not read. It was always blank on the board, because the newer

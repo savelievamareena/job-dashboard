@@ -30,16 +30,23 @@ Then start the database, create the schema, and load the parsing output into it:
 
 ```bash
 docker compose up -d
-docker compose exec -T db psql -U postgres -d jobdashboard -v ON_ERROR_STOP=1 < db/schema.sql
+docker compose exec -T db psql -U postgres -d jobdashboard -v ON_ERROR_STOP=1 < db/reset-schema.sql
 python3 db/migrate.py | docker compose exec -T db psql -U postgres -d jobdashboard -v ON_ERROR_STOP=1
 ```
 
-`db/schema.sql` starts by dropping `vacancy`, so it is for an empty database only. To change the
-shape of one already in use, write an alter script beside it; `db/alter-2026-08-11-board-on-db.sql`
-is the worked example.
+`db/reset-schema.sql` starts by dropping `vacancy`, so it is for an empty database only; it refuses
+to run otherwise. To change the shape of one already in use, write an alter script beside it;
+`db/alter-2026-08-11-board-on-db.sql` is the worked example.
 
-Re-run the loader after every parsing run. It is idempotent and deletes nothing: postings are
-merged by id, `is_selected` is only ever raised, and `job_status` is never touched.
+Both `db` and the backend bind to `127.0.0.1` only (see `docker-compose.yml` and
+`application.yml`), and the API has no authentication in front of it. That is fine for a personal
+tool running on one machine; it is not something to expose to a LAN or the internet without adding
+auth and TLS first.
+
+Re-run the loader after every parsing run. It is idempotent for `vacancy` and `job_status`:
+postings are merged by id, `is_selected` is only ever raised, and `job_status` is never touched.
+`cv_queue` is the exception — it is truncated and reloaded from `review-queue.csv` on every run,
+since that queue has no marks of its own to lose.
 
 ## Running it
 
@@ -139,12 +146,18 @@ are matched by company and answer for every posting of it, which is all they can
 
 ## What it writes
 
-One table, `job_status`: a posting id, a status and a note. Statuses are `applied`, `not a fit` and
+Mostly `job_status`: a posting id, a status and a note. Statuses are `applied`, `not a fit` and
 `closed`; clearing both fields deletes the row, the same way an untouched posting has none.
 
-That table is the only thing this application writes, and the only one the loader never touches.
-A refill from a file would throw away every mark made since the last import, which is why
-`db/migrate.py` has no insert into it at all.
+That table is the loader's one blind spot: a refill from a file would throw away every mark made
+since the last import, which is why `db/migrate.py` has no insert into it at all.
+
+The board can also set `vacancy.apply_url`, the address behind the Apply button, pasted by hand
+through `PUT /api/vacancies/apply-url`. Unlike `job_status` this column is also written by the
+loader, from the paid lookup that used to fill it (see `db/alter-2026-08-12-apply-url.sql`) — but
+the merge is `coalesce(new, existing)`, so a re-scrape with nothing in that field never blanks a
+value the board pasted by hand; it only gets overwritten by a real value from the same lookup,
+which stopped answering on 2026-08-13.
 
 Marks used to live in `DailySearch/_status.json` and were mirrored into the table on every load, so
 the same mark existed twice and the file was the one that won. The file is no longer read or
@@ -158,10 +171,12 @@ Nothing needs restarting once the container is back.
 
 ## API
 
-| Method | Path                    | Does                                              |
-|--------|-------------------------|---------------------------------------------------|
-| GET    | `/api/vacancies`        | the selected postings plus the available statuses |
-| PUT    | `/api/vacancies/status` | stores `{ url, status, note }`                    |
+| Method | Path                        | Does                                                        |
+|--------|------------------------------|--------------------------------------------------------------|
+| GET    | `/api/vacancies`             | the selected postings plus the available statuses            |
+| PUT    | `/api/vacancies/status`      | stores `{ url, status, note }`                                |
+| PUT    | `/api/vacancies/apply-url`   | stores `{ url, applyUrl }`; blank clears it, see above        |
+| GET    | `/api/statistics`            | the three trend views plus `scanDays`, for the charts page    |
 
 ## Tests
 

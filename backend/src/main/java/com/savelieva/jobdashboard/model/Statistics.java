@@ -11,7 +11,7 @@ import java.util.List;
  * list the page would draw a zero for a day with no search run, which reads as the market
  * dropping to nothing and recovering.
  *
- * @see <a href="file:../../../../../../../db/schema.sql">db/schema.sql</a>
+ * @see <a href="file:../../../../../../../db/reset-schema.sql">db/reset-schema.sql</a>
  */
 public record Statistics(
         List<TrendPoint> language,
