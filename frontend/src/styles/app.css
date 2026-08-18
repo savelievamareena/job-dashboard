@@ -111,7 +111,6 @@ a {
     font-size: 12px;
 }
 
-/* Only a host name, so it never has to wrap; small, because the column beside it says the rest. */
 .apply-link {
     white-space: nowrap;
     font-size: 12px;
@@ -123,8 +122,6 @@ a {
     gap: 2px;
 }
 
-/* Narrow on purpose: the address is long and never worth reading in full here - the link above it
-   says which ATS it is, and the box keeps the text for editing and in its tooltip. */
 .apply-input {
     width: 150px;
     font-size: 12px;

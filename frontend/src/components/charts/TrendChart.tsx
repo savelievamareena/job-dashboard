@@ -61,9 +61,6 @@ export const TrendChart = ({ rows, series }: Props) => {
                     tick={AXIS}
                     tickLine={false}
                     stroke="var(--baseline)"
-                    // Keeps the first and last points off the edges, so their value labels do
-                    // not land on the y-axis ticks or run out of the plot.
-                    padding={{ left: 14, right: 14 }}
                 />
                 <YAxis
                     allowDecimals={false}
@@ -93,17 +90,12 @@ export const TrendChart = ({ rows, series }: Props) => {
                 {series.map(({ name, color, label }) => (
                     <Line
                         key={name}
-                        // Legend and tooltip show this; the hover still keys off dataKey.
                         name={label}
-                        // Straight segments: a daily count does not ease between days, and a
-                        // spline invents a curve through values that were never observed.
                         type="linear"
                         dataKey={name}
                         stroke={color}
                         strokeWidth={hovered === name ? 3 : 2}
                         strokeOpacity={opacity(name)}
-                        // The ring is the surface colour, so crossing lines separate without a
-                        // border being drawn around either of them.
                         dot={{
                             r: 3,
                             strokeWidth: 2,
@@ -112,12 +104,6 @@ export const TrendChart = ({ rows, series }: Props) => {
                             strokeOpacity: opacity(name),
                         }}
                         activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface-1)" }}
-                        // Only the highlighted series is numbered: a value on every point of
-                        // seven lines is unreadable, but on one line it answers the question
-                        // the hover asked. The label wears the text token and carries a surface
-                        // halo, so it stays legible where it crosses another line - and it is
-                        // what lets a value be read without relying on the hue, which matters
-                        // for the light-mode series that sit below the contrast floor.
                         label={
                             hovered === name
                                 ? {
@@ -131,8 +117,6 @@ export const TrendChart = ({ rows, series }: Props) => {
                                   }
                                 : false
                         }
-                        // The days with no search run keep their slot on the axis, so the gap
-                        // is still visible in the spacing, but the line spans it.
                         connectNulls
                         isAnimationActive={false}
                     />

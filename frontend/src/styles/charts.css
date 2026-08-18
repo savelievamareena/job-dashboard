@@ -1,12 +1,3 @@
-/*
- * Chart tokens. The eight slots are the validated categorical order, and the order itself is the
- * colourblind-safety mechanism, not a preference: it clears the adjacent-pair separation gates in
- * both modes (worst CVD dE 9.1 light / 8.4 dark against a >= 8 target). A ninth series is not a
- * ninth hue - it folds into "other".
- *
- * The dark column is the same eight hues re-stepped for the dark surface, declared under both the
- * OS media query and the data-theme scope so a future theme toggle wins either way.
- */
 .viz {
     color-scheme: light;
     --surface-1: #fcfcfb;
@@ -69,7 +60,6 @@
     --series-8: #e66767;
 }
 
-/* Sits above <main>, which brings its own padding, so it repeats the horizontal inset here. */
 nav.pages {
     display: flex;
     gap: 4px;
@@ -98,18 +88,6 @@ nav.pages a[aria-current="page"] {
     font-size: 13px;
 }
 
-/*
- * One column, half the width, centred. The cards used to sit side by side in as many columns as
- * fit, which on a wide screen gave each one a short wide plot - the shape that flattens the very
- * slopes these lines exist to show.
- *
- * The floor is not decoration. At a plain 50% a phone would get a 170px plot, narrower than the
- * dated axis needs, so the width never drops below 420px; max-width then keeps that floor from
- * pushing past the edge of a screen narrower than the floor itself.
- *
- * The width lives on the wrapper rather than on the cards, so the period picker above them is the
- * same column and lines up with the card edges instead of floating off to the left of the page.
- */
 .stats {
     width: max(50%, 420px);
     max-width: 100%;
@@ -129,7 +107,6 @@ nav.pages a[aria-current="page"] {
     margin-bottom: 14px;
 }
 
-/* Reads as the page tabs above it, because it does the same thing: one of these is the view. */
 .periods button {
     cursor: pointer;
     border-color: transparent;
@@ -166,7 +143,6 @@ nav.pages a[aria-current="page"] {
     margin-top: 10px;
 }
 
-/* Recharts paints its own surface behind the tooltip; this keeps it on the chart surface. */
 .chart .recharts-tooltip-wrapper {
     outline: none;
 }
@@ -177,11 +153,6 @@ nav.pages a[aria-current="page"] {
     border-radius: 8px;
 }
 
-/*
- * Recharts paints legend and tooltip labels in the series colour. Text wears text tokens: the
- * coloured line marker beside the label is what carries identity, and on the light surface three
- * of the eight hues sit below 3:1, so a label in its own hue is the least readable thing here.
- */
 .chart .recharts-legend-item-text,
 .chart .recharts-tooltip-item {
     color: var(--text-secondary) !important;
