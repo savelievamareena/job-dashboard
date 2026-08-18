@@ -4,25 +4,15 @@ import {
     Legend,
     Line,
     LineChart,
+    ReferenceArea,
     ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis,
 } from "recharts";
 
-/**
- * null is a day the search did not run. It carries no dot - there is nothing to mark - but the
- * line is drawn across it, so the series stays readable instead of falling apart into isolated
- * points around every skipped day. The value at the gap is never asserted: no dot, no tooltip.
- */
 export type TrendRow = Record<string, number | string | null>;
 
-/**
- * The colour travels with the series, so dropping one never repaints the rest.
- *
- * name is the key in the data and stays a plain identifier; label is what the reader sees. The
- * two differ where a language is spelled one way in a column and another way by people.
- */
 export type TrendSeries = { name: string; color: string; label: string };
 
 type Props = {
@@ -32,28 +22,41 @@ type Props = {
 
 const AXIS = { fill: "var(--muted-ink)", fontSize: 11 };
 
-/** Enough to push a line into the background without making it vanish from the shape. */
 const DIMMED = 0.16;
 
-/** 2026-08-09 reads as 08-09: the year is the same on every tick and only costs width. */
 const shortDay = (day: string) => String(day).slice(5);
 
+const isWeekend = (day: string) => {
+    const [year, month, date] = day.split("-").map(Number);
+    const weekday = new Date(year, month - 1, date).getDay();
+    return weekday === 0 || weekday === 6;
+};
+
 export const TrendChart = ({ rows, series }: Props) => {
-    // Pointing at a legend entry emphasises that one series and pushes the rest back. Seven
-    // lines crossing each other are hard to follow individually, and emphasis answers "which one
-    // is this" without hiding the others, so the highlighted line keeps its context.
     const [hovered, setHovered] = useState<string | null>(null);
     const opacity = (name: string) => (hovered === null || hovered === name ? 1 : DIMMED);
 
+    const weekendDays = rows
+        .map((row) => row.day)
+        .filter((day): day is string => typeof day === "string" && isWeekend(day));
+
     return (
     <div className="chart">
-        <ResponsiveContainer width="100%" height={230}>
-            {/* Room at the top for the value labels the highlighted series puts above its points. */}
+        <ResponsiveContainer width="100%" height={300}>
             <LineChart data={rows} margin={{ top: 18, right: 12, bottom: 0, left: -18 }}>
-                {/* Solid hairlines: a dashed grid reads as a threshold when it is only a grid. */}
+                {weekendDays.map((day) => (
+                    <ReferenceArea
+                        key={day}
+                        x1={day}
+                        x2={day}
+                        fill="var(--weekend-fill)"
+                        stroke="none"
+                    />
+                ))}
                 <CartesianGrid vertical={false} stroke="var(--gridline)" strokeDasharray="0" />
                 <XAxis
                     dataKey="day"
+                    scale="band"
                     tickFormatter={shortDay}
                     tick={AXIS}
                     tickLine={false}

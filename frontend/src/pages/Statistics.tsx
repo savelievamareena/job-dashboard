@@ -183,7 +183,14 @@ export const Statistics = () => {
     }, [statistics, period]);
 
     if (loading) {
-        return <p className="empty">loading...</p>;
+        return (
+            <div className="stats">
+                <PeriodPicker period={period} onChange={setPeriod} />
+                <div className="loader" role="status" aria-label="Загрузка">
+                    <span className="spinner" />
+                </div>
+            </div>
+        );
     }
 
     if (error || !view || !statistics) {

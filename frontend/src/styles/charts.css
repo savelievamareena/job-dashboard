@@ -16,6 +16,7 @@
     --gridline: #e1e0d9;
     --baseline: #c3c2b7;
     --ring: rgba(11, 11, 11, 0.1);
+    --weekend-fill: rgba(11, 11, 11, 0.04);
     --series-1: #2a78d6;
     --series-2: #eb6834;
     --series-3: #1baf7a;
@@ -36,6 +37,7 @@
         --gridline: #2c2c2a;
         --baseline: #383835;
         --ring: rgba(255, 255, 255, 0.1);
+        --weekend-fill: rgba(255, 255, 255, 0.05);
         --series-1: #3987e5;
         --series-2: #d95926;
         --series-3: #199e70;
@@ -56,6 +58,7 @@
     --gridline: #2c2c2a;
     --baseline: #383835;
     --ring: rgba(255, 255, 255, 0.1);
+    --weekend-fill: rgba(255, 255, 255, 0.05);
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
