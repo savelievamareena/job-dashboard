@@ -37,3 +37,15 @@ export const saveApplyUrl = async (url: string, applyUrl: string): Promise<void>
         await failed(response);
     }
 };
+
+export const saveMaySubmit = async (url: string, maySubmit: boolean): Promise<void> => {
+    const response = await fetch("/api/vacancies/may-submit", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, maySubmit }),
+    });
+
+    if (!response.ok) {
+        await failed(response);
+    }
+};

@@ -159,6 +159,11 @@ the merge is `coalesce(new, existing)`, so a re-scrape with nothing in that fiel
 value the board pasted by hand; it only gets overwritten by a real value from the same lookup,
 which stopped answering on 2026-08-13.
 
+And `vacancy.may_submit`, through `PUT /api/vacancies/may-submit`: a checkbox she sets by hand to
+tell the apply agent it does not have to wait for her review on this posting before submitting.
+`db/migrate.py` never touches this column, so a re-import never resets it (see
+`db/alter-2026-08-20-may-submit.sql`).
+
 Marks used to live in `DailySearch/_status.json` and were mirrored into the table on every load, so
 the same mark existed twice and the file was the one that won. The file is no longer read or
 written. Everything that was in it was carried into the table by the alter script.
@@ -176,6 +181,7 @@ Nothing needs restarting once the container is back.
 | GET    | `/api/vacancies`             | the selected postings plus the available statuses            |
 | PUT    | `/api/vacancies/status`      | stores `{ url, status, note }`                                |
 | PUT    | `/api/vacancies/apply-url`   | stores `{ url, applyUrl }`; blank clears it, see above        |
+| PUT    | `/api/vacancies/may-submit`  | stores `{ url, maySubmit }`, see above                        |
 | GET    | `/api/statistics`            | the three trend views plus `scanDays`, for the charts page    |
 
 ## Tests

@@ -7,7 +7,10 @@ type Props = {
     sortKey: SortKey;
     sortDir: 1 | -1;
     onSort: (key: SortKey) => void;
-    onUpdate: (url: string, patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl">>) => void;
+    onUpdate: (
+        url: string,
+        patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "maySubmit">>,
+    ) => void;
 };
 
 /** A posting with one of these is out of play: rejected, or gone from LinkedIn entirely. */
@@ -21,6 +24,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
     { key: "cv", label: "CV" },
+    { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
     { key: "applyUrl", label: "Apply link" },
 ];
@@ -170,6 +174,16 @@ export const VacancyTable = ({
                     <td>{vacancy.level}</td>
                     <td>
                         <CvChoice cv={vacancy.cv} />
+                    </td>
+                    <td>
+                        <input
+                            type="checkbox"
+                            aria-label={`May submit for ${vacancy.company}`}
+                            checked={vacancy.maySubmit}
+                            onChange={(event) =>
+                                onUpdate(vacancy.url, { maySubmit: event.target.checked })
+                            }
+                        />
                     </td>
                     <td>
                         <select

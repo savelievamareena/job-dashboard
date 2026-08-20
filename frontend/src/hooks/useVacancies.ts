@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchVacancies, saveApplyUrl, saveStatus } from "@/api/vacancies";
+import { fetchVacancies, saveApplyUrl, saveMaySubmit, saveStatus } from "@/api/vacancies";
 import type { Vacancy } from "@/types";
 
 type State = {
@@ -9,7 +9,7 @@ type State = {
     error: string | null;
 };
 
-type Patch = Partial<Pick<Vacancy, "status" | "note" | "applyUrl">>;
+type Patch = Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "maySubmit">>;
 
 const INITIAL: State = { vacancies: [], statuses: [], loading: true, error: null };
 
@@ -82,6 +82,11 @@ export const useVacancies = () => {
         // job_status. Sending one when only the other changed would rewrite a value nobody edited.
         if (patch.applyUrl !== undefined) {
             saveApplyUrl(url, next.applyUrl).catch(failed("cannot save the apply link"));
+            return;
+        }
+
+        if (patch.maySubmit !== undefined) {
+            saveMaySubmit(url, next.maySubmit).catch(failed("cannot save may submit"));
             return;
         }
 

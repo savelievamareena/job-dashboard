@@ -131,6 +131,7 @@ create table vacancy (
     -- month, so it is filled one named posting at a time and never in bulk. See
     -- alter-2026-08-12-apply-url.sql.
     apply_url   text,
+    may_submit  boolean not null default false,
     level       text not null default '',
     job_type    text not null default '',
     location    text not null default '',

@@ -15,6 +15,7 @@ export type Vacancy = {
      * on 2026-08-13, so the board is now where it gets typed in by hand.
      */
     applyUrl: string;
+    maySubmit: boolean;
     level: string;
     jobType: string;
     location: string;
@@ -42,7 +43,8 @@ export type SortKey =
     | "level"
     | "cv"
     | "status"
-    | "applyUrl";
+    | "applyUrl"
+    | "maySubmit";
 
 export type Filters = {
     date: string;

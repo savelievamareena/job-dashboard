@@ -17,9 +17,10 @@ import org.springframework.stereotype.Repository;
  * <p>One posting is one row here, where the folders held one row per sighting. A posting picked on
  * two days was two rows on the old board; it is one now, dated by the later pick.
  *
- * <p>Read only but for one column: apply_url, which the board lets her paste into because the paid
- * lookup that used to fill it stopped answering. Marks are written by {@link StatusRepository}, and
- * everything else in this table belongs to the loader.
+ * <p>Read only but for two columns: apply_url, which the board lets her paste into because the paid
+ * lookup that used to fill it stopped answering, and may_submit, which she raises by hand to tell
+ * the apply agent it may submit without waiting for her review. Marks are written by
+ * {@link StatusRepository}, and everything else in this table belongs to the loader.
  */
 @Repository
 public class JdbcVacancyRepository implements VacancyRepository {
@@ -42,7 +43,8 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, track, company, title, url,
-                   easy_apply, apply_url, level, job_type, location, applicants, gap, has_text
+                   easy_apply, apply_url, may_submit, level, job_type, location, applicants, gap,
+                   has_text
             from vacancy
             where is_selected
             order by coalesce(posted_at::date, selected_date, found_date) desc, lower(company)
@@ -69,6 +71,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
             "",
             rs.getObject("easy_apply", Boolean.class),
             text(rs.getString("apply_url")),
+            rs.getBoolean("may_submit"),
             text(rs.getString("level")),
             text(rs.getString("job_type")),
             text(rs.getString("location")),
@@ -80,6 +83,9 @@ public class JdbcVacancyRepository implements VacancyRepository {
             "");
 
     private static final String SAVE_APPLY_URL = "update vacancy set apply_url = ? where job_id = ?";
+
+    private static final String SAVE_MAY_SUBMIT =
+            "update vacancy set may_submit = ? where job_id = ?";
 
     private static String text(String value) {
         return value == null ? "" : value;
@@ -112,6 +118,13 @@ public class JdbcVacancyRepository implements VacancyRepository {
     public void saveApplyUrl(String url, String applyUrl) {
         String value = applyUrl == null || applyUrl.isBlank() ? null : applyUrl.strip();
         if (jdbc.update(SAVE_APPLY_URL, value, StatusRepository.jobId(url)) == 0) {
+            throw new StatusRepository.UnknownPostingException(url);
+        }
+    }
+
+    @Override
+    public void saveMaySubmit(String url, boolean maySubmit) {
+        if (jdbc.update(SAVE_MAY_SUBMIT, maySubmit, StatusRepository.jobId(url)) == 0) {
             throw new StatusRepository.UnknownPostingException(url);
         }
     }

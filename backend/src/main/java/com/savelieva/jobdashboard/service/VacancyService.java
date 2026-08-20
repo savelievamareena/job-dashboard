@@ -74,6 +74,11 @@ public class VacancyService {
         return value;
     }
 
+    public boolean updateMaySubmit(String url, boolean maySubmit) {
+        vacancies.saveMaySubmit(url, maySubmit);
+        return maySubmit;
+    }
+
     private static boolean isHttpUrl(String value) {
         try {
             String scheme = java.net.URI.create(value).getScheme();

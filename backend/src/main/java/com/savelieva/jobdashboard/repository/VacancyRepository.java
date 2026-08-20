@@ -19,4 +19,6 @@ public interface VacancyRepository {
      * @throws StatusRepository.UnknownPostingException when no posting carries this url
      */
     void saveApplyUrl(String url, String applyUrl);
+
+    void saveMaySubmit(String url, boolean maySubmit);
 }

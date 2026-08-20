@@ -42,6 +42,11 @@ public class VacancyController {
         return new ApplyUrlResponse(service.updateApplyUrl(request.url(), request.applyUrl()));
     }
 
+    @PutMapping("/vacancies/may-submit")
+    public MaySubmitResponse updateMaySubmit(@Valid @RequestBody MaySubmitUpdateRequest request) {
+        return new MaySubmitResponse(service.updateMaySubmit(request.url(), request.maySubmit()));
+    }
+
     public record VacanciesResponse(List<Vacancy> vacancies, List<String> statuses) {}
 
     public record StatusUpdateRequest(@NotBlank String url, String status, String note) {}
@@ -49,4 +54,8 @@ public class VacancyController {
     public record ApplyUrlUpdateRequest(@NotBlank String url, String applyUrl) {}
 
     public record ApplyUrlResponse(String applyUrl) {}
+
+    public record MaySubmitUpdateRequest(@NotBlank String url, boolean maySubmit) {}
+
+    public record MaySubmitResponse(boolean maySubmit) {}
 }
