@@ -52,6 +52,11 @@ button {
     background: transparent;
 }
 
+/* The picker arrow sits inside the padding box, so this is what holds it off the border. */
+.bar select {
+    padding-right: 11px;
+}
+
 .clear {
     cursor: pointer;
 }
@@ -86,6 +91,13 @@ th {
     cursor: pointer;
     white-space: nowrap;
     user-select: none;
+}
+
+/* Wide enough for a full ISO date, which would otherwise wrap onto a second line. */
+th:first-child,
+td.date {
+    width: 92px;
+    white-space: nowrap;
 }
 
 .arrow {

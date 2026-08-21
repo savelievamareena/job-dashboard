@@ -153,7 +153,7 @@ export const VacancyTable = ({
                     key={`${vacancy.date}|${vacancy.source}|${vacancy.track}|${vacancy.url}`}
                     className={INACTIVE.has(vacancy.status) ? "done" : ""}
                 >
-                    <td>{vacancy.date}</td>
+                    <td className="date">{vacancy.date}</td>
                     <td className="company" title={vacancy.company}>
                         {vacancy.company}
                     </td>
