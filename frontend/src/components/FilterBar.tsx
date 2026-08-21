@@ -80,6 +80,7 @@ export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Pro
 
             <input
                 type="search"
+                className="search"
                 aria-label="Search"
                 placeholder="search by company and job title"
                 value={filters.query}

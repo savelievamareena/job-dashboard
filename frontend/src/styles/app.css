@@ -57,6 +57,12 @@ button {
     padding-right: 11px;
 }
 
+/* Fits the placeholder, which the default input width cut off mid-word. The search type
+   reserves ~7px inside for its clear button, on top of the padding and border. */
+.search {
+    width: 240px;
+}
+
 .clear {
     cursor: pointer;
 }
