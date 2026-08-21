@@ -25,3 +25,5 @@ dist/
 # WebStorm module files (the .idea folder above covers the rest)
 *.iml
 
+# Claude Code working agreements: local only, not part of the project
+CLAUDE.md
