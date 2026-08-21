@@ -56,9 +56,11 @@ LANGUAGE = {"node": "javascript", "nodejs": "javascript", "typescript": "javascr
 # This map only RENAMES; it is read as LAYER.get(value, value), so anything absent passes through
 # unchanged. That is why `fullstack` and `back-ops` are not listed - the skill and the database
 # spell them the same way - while `front`, `back` and the skill's short `ops` are. "unknown" is
-# the skill saying it could not tell, which is absence, not another layer, so it maps to None.
+# the skill saying it could not tell - not another real layer, but not None either (2026-08-22):
+# she wants the same word `unsorted` in this column as in `track` for "nobody has decided this
+# yet", rather than one column saying NULL and the other a string for the identical fact.
 # The five layers that reach the chart: frontend, backend, fullstack, devops, back-ops.
-LAYER = {"front": "frontend", "back": "backend", "ops": "devops", "unknown": None}
+LAYER = {"front": "frontend", "back": "backend", "ops": "devops", "unknown": "unsorted"}
 
 
 def dashboard_root() -> Path:
