@@ -169,8 +169,25 @@ def by_url(rows: list) -> dict:
     return {u: row for row in rows if (u := column(row, "url"))}
 
 
+def languages_by_url(rows: list) -> dict:
+    """Every distinct, non-blank `language` a reclassified.csv names for a url, in file order.
+
+    Additive, unlike by_url()'s last-wins: a language correction states one confirmed language
+    per row rather than overwriting the previous one, so a confirmed fullstack posting is TWO
+    rows sharing a url - one for java, one for javascript - never one cell joined with a
+    delimiter. That is what lets job_languages stay a real one-row-per-language table all the
+    way from the file up, with no string to parse anywhere in the pipeline."""
+    result: dict = {}
+    for row in rows:
+        u = column(row, "url")
+        lang = column(row, "language").lower()
+        if u and lang and lang not in result.setdefault(u, []):
+            result[u].append(lang)
+    return result
+
+
 def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
-                      corrections: dict = None) -> list:
+                      corrections: dict = None, language_corrections: dict = None) -> list:
     """Every (day, track) appearance. Collapsing them to one row per posting happens in SQL.
 
     Fills scan_days on the way through: a date folder exists exactly when a run happened, which
@@ -209,7 +226,9 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                 # `layer` are all rebuilt from the folder on every load, so an UPDATE run
                 # straight against Postgres is undone by the next /find-jobs - that happened to
                 # 15 rows on 2026-08-11. Applied here, the correction is re-applied every time.
-                fixed = by_url(read_csv(day / track / "reclassified.csv"))
+                fixed_rows = read_csv(day / track / "reclassified.csv")
+                fixed = by_url(fixed_rows)
+                fixed_langs = languages_by_url(fixed_rows)
                 if picked and track not in BOARD_TRACKS:
                     # The board would never reach these, so flagging them would put rows on it
                     # that /api/vacancies does not return.
@@ -252,6 +271,16 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                                 "track": column(correction, "track").lower() or None,
                                 "language": column(correction, "language").lower() or None,
                                 "layer": column(correction, "layer").lower() or None})
+                    # Every language reclassified.csv named for this url, not just the one on the
+                    # last row - see languages_by_url(). This is the ONLY path a confirmed
+                    # fullstack posting's second language reaches job_languages; the `correction`
+                    # dict above still only ever sees the last row's single value.
+                    langs = fixed_langs.get(url)
+                    if langs and language_corrections is not None:
+                        existing = language_corrections.setdefault(identifier, [])
+                        for lang in langs:
+                            if lang not in existing:
+                                existing.append(lang)
                     row_track = column(correction, "track").lower() or track
                     # Fullstack without Java is not one of her tracks, whatever folder the row
                     # sits in. Her rule, 2026-08-11: "везде где у нас фулстек технология НО БЕЗ
@@ -487,14 +516,53 @@ create temp table vacancy_load (
         if sets:
             print(f"update vacancy set {sets} where job_id = {literal(job_id)};")
 
-    # The parser only classifies the other-stacks and ai tracks; for these two the search itself
-    # is language-scoped, so the folder is the answer and no column was ever written. Applied on
-    # every load rather than once by hand, or the next import leaves its new rows unclassified.
-    # Only fills nulls, so a language the parser did write always wins.
+    # The parser only classifies the other-stacks and ai tracks; frontend is language-scoped too
+    # (her core is React, always), so the folder is the answer and no column was ever written for
+    # it. Applied on every load rather than once by hand, or the next import leaves its new rows
+    # unclassified. Only fills nulls, so a language the parser did write always wins.
+    #
+    # fullstack does NOT get the same treatment any more (her call, 2026-08-25, after the Boeing
+    # posting sat in the fullstack folder for three weeks with language defaulted to 'java' while
+    # its description had no Java in it at all). A generic "Fullstack" title is a guess, not a
+    # read - filling it here the same way filled it with the same guess classify() already
+    # stopped making. language for a fullstack posting is null until /select-jobs actually opens
+    # the description and writes it, same as track='unsorted' works for everything else.
     print("update vacancy set language = 'javascript' "
           "where track = 'frontend' and language is null;")
-    print("update vacancy set language = 'java' "
-          "where track = 'fullstack' and language is null;")
+
+
+def emit_job_languages(language_corrections: dict = None) -> None:
+    """job_languages is never edited directly, so the simplest correct thing on every load is to
+    drop it and rebuild it from two sources:
+
+    1. vacancy.language - still exactly one word per posting, the way it always was for the
+       tracks that only ever need one (frontend, other-stacks, ai). One row each.
+    2. `language_corrections` - every language a reclassified.csv row named for a posting (see
+       languages_by_url()), which is how a confirmed fullstack posting gets counted under BOTH
+       java and javascript: as two separate rows in the file, never one delimited cell, so there
+       is no string to parse on this side either. `on conflict do nothing` lets the two sources
+       overlap for free.
+
+    See alter-2026-08-25-multi-language-per-vacancy.sql for why the table looks like this.
+    """
+    print("delete from job_languages;")
+    print("insert into languages (name) "
+          "select distinct language from vacancy where language is not null "
+          "on conflict (name) do nothing;")
+    print("insert into job_languages (job_id, language_id, is_primary) "
+          "select v.job_id, l.id, true from vacancy v join languages l on l.name = v.language "
+          "where v.language is not null "
+          "on conflict (job_id, language_id) do nothing;")
+
+    for job_id, langs in sorted((language_corrections or {}).items()):
+        for lang in langs:
+            print(f"insert into languages (name) values ({literal(LANGUAGE.get(lang, lang))}) "
+                  f"on conflict (name) do nothing;")
+        for i, lang in enumerate(langs):
+            print(f"insert into job_languages (job_id, language_id, is_primary) "
+                  f"select {literal(job_id)}, id, {literal(i == 0)} from languages "
+                  f"where name = {literal(LANGUAGE.get(lang, lang))} "
+                  f"on conflict (job_id, language_id) do nothing;")
 
 
 def main() -> None:
@@ -505,12 +573,14 @@ def main() -> None:
     notes = {"selected_off_board": 0, "picked_without_jobs_row": 0, "reclassified": 0}
     scan_days = set()
     corrections: dict = {}
-    sightings = collect_sightings(root_dir, notes, scan_days, corrections)
+    language_corrections: dict = {}
+    sightings = collect_sightings(root_dir, notes, scan_days, corrections, language_corrections)
     cv_rows = collect_cv_queue(root_dir)
 
     print(f"-- generated by db/migrate.py from {root_dir}")
     print("begin;")
     emit_vacancy_upsert(sightings, corrections)
+    emit_job_languages(language_corrections)
     # Only ever added to: a day the search ran stays one, even if its folder is later cleaned up.
     insert("scan_day", ["day"], [{"day": day} for day in sorted(scan_days)],
            "on conflict do nothing")

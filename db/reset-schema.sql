@@ -99,6 +99,12 @@ create table vacancy (
     -- Normalised at import, so a chart never has to know that the skills wrote node for
     -- JavaScript or dotnet for C#. Null means the skill did not classify this posting: the
     -- columns arrived recently, so most older rows have none, and a gap is shown as a gap.
+    --
+    -- No longer what the chart reads (see `job_languages` below) - still exactly one word, for
+    -- the tracks that only ever need one (frontend, other-stacks, ai). A confirmed fullstack
+    -- posting's second language never touches this column: /select-jobs writes it as a second
+    -- row in reclassified.csv instead (same url, one language per row), and db/migrate.py reads
+    -- both straight into two job_languages rows - no delimiter, no string to parse.
     language    text,
     layer       text,
     ai_kind     text,
@@ -146,9 +152,28 @@ create table vacancy (
 create index vacancy_board_idx
     on vacancy (coalesce(posted_at::date, selected_date, found_date) desc, lower(company))
     where is_selected;
-create index vacancy_language_idx on vacancy (found_date, language) where language is not null;
 create index vacancy_layer_idx on vacancy (found_date, layer) where layer is not null;
 create index vacancy_ai_idx on vacancy (found_date, ai_kind) where ai_kind is not null;
+
+-- A posting can need more than one language - her Fullstack core is React AND Java, so a real
+-- fullstack posting is both at once, not a choice between them. many-to-many rather than a
+-- delimited string in `vacancy.language`, her call 2026-08-25: normal filters/GROUP BY/indexes,
+-- no string parsing, room for metadata (is_primary here, more later) without another migration.
+-- See alter-2026-08-25-multi-language-per-vacancy.sql for how this reached a live database and
+-- why `vacancy.language` itself is not dropped.
+create table languages (
+    id   bigint generated always as identity primary key,
+    name text not null unique
+);
+
+create table job_languages (
+    job_id      text not null references vacancy (job_id) on delete cascade,
+    language_id bigint not null references languages (id),
+    is_primary  boolean not null default true,
+    primary key (job_id, language_id)
+);
+
+create index job_languages_language_idx on job_languages (language_id);
 
 -- What the board has been told about a posting: applied, not a fit, closed, plus a free note.
 --
@@ -222,10 +247,15 @@ create index cv_queue_company_idx on cv_queue (core, lower(company));
 -- are still stored with their real language, because a row deleted at write time cannot be got
 -- back. They are kept off the chart rather than out of the table, which is why this is a
 -- filter here and not a rule in the skill.
+-- Reads job_languages, not vacancy.language directly - a fullstack posting with two rows there
+-- (java, javascript) counts once in EACH series instead of once in whichever single word used
+-- to sit in the old scalar column. See alter-2026-08-25-multi-language-per-vacancy.sql.
 create view trend_language as
-select coalesce(posted_at::date, found_date) as day, language as series, count(*)::int as count
-from vacancy
-where language is not null and language not in ('ruby', 'php')
+select coalesce(v.posted_at::date, v.found_date) as day, l.name as series, count(*)::int as count
+from job_languages jl
+join vacancy v on v.job_id = jl.job_id
+join languages l on l.id = jl.language_id
+where l.name not in ('ruby', 'php')
 group by 1, 2
 order by 1, 2;
 
