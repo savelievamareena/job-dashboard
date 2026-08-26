@@ -56,6 +56,8 @@ export type Filters = {
 
 export const EMPTY_FILTERS: Filters = { date: "", track: "", easyApply: "", status: "", query: "" };
 
+export const NO_STATUS = "none";
+
 /**
  * One point of a trend view. All three views share this shape, so one chart reads any of them.
  *

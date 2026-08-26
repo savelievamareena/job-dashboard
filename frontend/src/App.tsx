@@ -3,15 +3,16 @@ import { FilterBar } from "@/components/FilterBar";
 import { VacancyTable } from "@/components/VacancyTable";
 import { useStoredFilters } from "@/hooks/useStoredFilters";
 import { useVacancies } from "@/hooks/useVacancies";
-import type { Filters, SortKey, Vacancy } from "@/types";
+import { NO_STATUS, type Filters, type SortKey, type Vacancy } from "@/types";
 
 const matches = (vacancy: Vacancy, filters: Filters) => {
     const haystack = `${vacancy.company} ${vacancy.title}`.toLowerCase();
+    const status = filters.status === NO_STATUS ? "" : filters.status;
 
     return (
         (!filters.date || vacancy.date === filters.date) &&
         (!filters.track || vacancy.track === filters.track) &&
-        (!filters.status || vacancy.status === filters.status) &&
+        (!filters.status || vacancy.status === status) &&
         (!filters.easyApply || vacancy.easyApply === (filters.easyApply === "yes")) &&
         (!filters.query || haystack.includes(filters.query.toLowerCase()))
     );

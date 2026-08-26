@@ -1,4 +1,4 @@
-import { EMPTY_FILTERS, type Filters, type Vacancy } from "@/types";
+import { EMPTY_FILTERS, NO_STATUS, type Filters, type Vacancy } from "@/types";
 
 type Props = {
     filters: Filters;
@@ -71,7 +71,8 @@ export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Pro
                 onChange={(event) => set("status", event.target.value)}
             >
                 <option value="">any status</option>
-                {options(statuses, filters.status).map((status) => (
+                <option value={NO_STATUS}>no status</option>
+                {options(statuses, filters.status === NO_STATUS ? "" : filters.status).map((status) => (
                     <option key={status} value={status}>
                         {status}
                     </option>
