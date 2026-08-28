@@ -4,10 +4,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * The Vite dev server runs on its own port and calls this API directly, so it needs to be allowed
- * explicitly. In a built frontend the two are served together and this never comes into play.
- */
+/** The Vite dev server calls this API from its own port; a built frontend is served together. */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 

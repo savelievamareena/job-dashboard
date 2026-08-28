@@ -7,16 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-/**
- * Reads the three trend views and the scan days. Four statements, no join: the views already
- * carry the grouping, and the page draws them as three separate charts anyway.
- *
- * <p>Nothing here fetches a posting from LinkedIn or re-reads jobs.csv. Opening the page must not
- * cost API credits, so the charts are only ever as fresh as the last loader run.
- *
- * <p>Read only. The loader owns this schema; if this class ever needs to write, that is the sign
- * something has been put in the wrong place.
- */
+/** Reads the three trend views and the scan days; read only, as fresh as the last loader run. */
 @Repository
 public class StatisticsRepository {
 

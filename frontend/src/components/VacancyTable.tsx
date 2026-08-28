@@ -50,19 +50,7 @@ const host = (url: string) => {
     }
 };
 
-/**
- * Where the Apply button leads outside LinkedIn, and the box to paste it into.
- *
- * The paid lookup that used to fill this column stopped answering on 2026-08-13, so the address
- * now arrives the only way left: she opens the posting, presses Apply, and pastes where it landed.
- * The box is always there rather than appearing on a click, because an empty cell that hides an
- * input reads as "nothing can be done here" - which was true yesterday and is the whole point of
- * the change.
- *
- * Once set, the host shows above the box as a link: it alone says which form is waiting - the
- * company's own site or one of the usual ATS - while the full address stays in the box, where it
- * can be corrected and where the title attribute shows it in full.
- */
+/** Where Apply leads outside LinkedIn, pasted by hand; the host shows above the box as a link. */
 const ApplyLinkCell = ({
     applyUrl,
     company,
@@ -94,10 +82,7 @@ const ApplyLinkCell = ({
     </div>
 );
 
-/**
- * Which CV goes out. "tailored" sits in the company folder of the core it was built from, "core CV"
- * is the base file sent unchanged, and nothing built yet is its own answer rather than either.
- */
+/** Which CV goes out: tailored, the core sent unchanged, or nothing built yet. */
 const CvChoice = ({ cv }: { cv: Vacancy["cv"] }) => {
     if (cv === null) {
         return <span className="tag unknown">not built</span>;
@@ -142,13 +127,7 @@ export const VacancyTable = ({
         </thead>
         <tbody>
             {vacancies.map((vacancy) => (
-                /*
-                 * The url alone is not unique: the same posting picked on two days, or under two
-                 * tracks on one day, is two rows here on purpose - they carry different dates and
-                 * stacks. Two rows under one key make React map both onto the same node, so every
-                 * reorder leaves an extra row behind and the table grows until the page reloads.
-                 * What identifies a row is where it was found.
-                 */
+                /* The url alone is not unique: one posting can appear under two dates or tracks. */
                 <tr
                     key={`${vacancy.date}|${vacancy.source}|${vacancy.track}|${vacancy.url}`}
                     className={INACTIVE.has(vacancy.status) ? "done" : ""}

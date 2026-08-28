@@ -10,21 +10,11 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
-/**
- * Joins the picked postings with the marks the dashboard has stored for them and with the CV the
- * tailoring built for each company.
- *
- * <p>Three queries rather than one join. They read three tables that answer three different
- * questions, the two small ones are a handful of rows each, and keeping them apart is what lets
- * the marks be written without touching anything the loader owns.
- */
+/** Joins the picked postings with their marks and the CV built for the company: three queries. */
 @Service
 public class VacancyService {
 
-    /**
-     * The statuses offered in the UI. The empty one means the posting has not been touched yet;
-     * "closed" means the posting is gone from LinkedIn, so it is dead rather than rejected.
-     */
+    /** The statuses offered in the UI; empty means untouched, "closed" means gone from LinkedIn. */
     public static final List<String> STATUSES = List.of("", "applied", "not a fit", "closed");
 
     /** Statuses that take a posting out of play: the board greys these rows out. */
@@ -56,15 +46,7 @@ public class VacancyService {
         return status;
     }
 
-    /**
-     * Stores the address behind the Apply button, as pasted on the board.
-     *
-     * <p>Validated here rather than at the edge because the column is read as a link: an address
-     * the browser cannot open is worse than an empty cell, which at least reads as "nobody has
-     * looked yet". Blank clears the cell, and clearing is always allowed.
-     *
-     * @throws InvalidApplyUrlException when the text is not an absolute http(s) address
-     */
+    /** Stores the pasted Apply address; blank clears it, anything not http(s) is refused. */
     public String updateApplyUrl(String url, String applyUrl) {
         String value = applyUrl == null ? "" : applyUrl.strip();
         if (!value.isEmpty() && !isHttpUrl(value)) {

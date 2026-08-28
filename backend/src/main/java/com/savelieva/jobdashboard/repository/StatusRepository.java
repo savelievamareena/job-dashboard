@@ -6,39 +6,18 @@ import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/**
- * The marks the board sets on a posting: how far it got, and a free note.
- *
- * <p>The one thing this application writes. Everything else in the database belongs to the loader,
- * which is why job_status is the only table migrate.py never truncates: a refill from a file would
- * throw away every mark made since the last import.
- *
- * <p>These used to live in a _status.json the loader mirrored into the table on every run, so the
- * same mark existed in two places and the file was the one that won. The file is no longer read or
- * written. Marks made before the move were carried into the table by
- * {@code db/alter-2026-08-11-board-on-db.sql}.
- *
- * <p>Read on every request rather than cached: the map is tiny, and a mark set in another tab
- * should show up on reload.
- */
+/** The marks the board sets, the one thing this app writes; migrate.py never truncates them. */
 @Repository
 public class StatusRepository {
 
-    /**
-     * Keyed by url for the caller, stored by job_id. The board knows a posting by its url and the
-     * table names it the way vacancy does, so the join is what translates between the two.
-     */
+    /** Keyed by url for the caller, stored by job_id; the join translates between the two. */
     private static final String ALL = """
             select v.url, s.status, s.note
             from job_status s
             join vacancy v on v.job_id = s.job_id
             """;
 
-    /**
-     * Selecting the job_id out of vacancy rather than binding it directly is what enforces that a
-     * mark names a posting the database actually holds. An unknown one writes no row and is
-     * reported, instead of failing on the foreign key with a message about a constraint.
-     */
+    /** Selecting job_id from vacancy makes an unknown posting write no row, not fail. */
     private static final String UPSERT = """
             insert into job_status (job_id, status, note)
             select v.job_id, ?, ? from vacancy v where v.job_id = ?
@@ -66,11 +45,7 @@ public class StatusRepository {
         return findAll().getOrDefault(url, JobStatus.EMPTY);
     }
 
-    /**
-     * Stores the mark for one posting, or removes it once it is empty again.
-     *
-     * @throws UnknownPostingException when no posting in the database carries this url
-     */
+    /** Stores the mark for one posting, or removes it once it is empty again. */
     public void save(String url, JobStatus status) {
         String jobId = jobId(url);
         if (status.isEmpty()) {
@@ -84,14 +59,7 @@ public class StatusRepository {
         }
     }
 
-    /**
-     * The trailing part of the url, which is how every part of this project names a posting: the
-     * loader derives it the same way, and the alter script derived it the same way when it moved
-     * the old marks over.
-     *
-     * <p>Shared with {@link JdbcVacancyRepository}, which writes the pasted apply link and has to
-     * name the posting identically. Spelling the same rule twice is how the two would drift.
-     */
+    /** The trailing part of the url, the way every part of this project names a posting. */
     static String jobId(String url) {
         String trimmed = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         int cut = trimmed.lastIndexOf('/');

@@ -3,13 +3,7 @@ package com.savelieva.jobdashboard.model;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Locale;
 
-/**
- * Which CV goes to a company: the one tailored for it, or the core sent as it is.
- *
- * <p>There is no third constant for "nothing built yet". That case is a missing value, the same way
- * a missing Easy Apply flag is: "not decided" and "send the core" are different answers, and only
- * one of them means the tailoring already ran.
- */
+/** Tailored for the company, or the core sent as it is; nothing built yet is a missing value. */
 public enum CvKind {
     TAILORED,
     BASE;

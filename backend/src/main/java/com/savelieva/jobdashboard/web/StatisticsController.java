@@ -16,10 +16,7 @@ public class StatisticsController {
         this.statistics = statistics;
     }
 
-    /**
-     * A stopped container is answered by {@link ApiExceptionHandler}, which the board now shares:
-     * both pages read the database, so both fail the same way and say the same thing.
-     */
+    /** A stopped container is answered by {@link ApiExceptionHandler}, shared with the board. */
     @GetMapping("/statistics")
     public Statistics statistics() {
         return statistics.find();

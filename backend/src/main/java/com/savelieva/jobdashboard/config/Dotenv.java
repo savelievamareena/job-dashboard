@@ -7,20 +7,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Reads a {@code .env} file into system properties before Spring starts, so the path to the CVs
- * folder can stay out of the repository without anyone exporting a variable before every run.
- *
- * <p>Loaded from {@code main} rather than through an {@code EnvironmentPostProcessor}: the
- * factory-loaded variant has to be instantiated reflectively, which makes an injectable start
- * directory awkward and fails quietly when it cannot pick a constructor. A plain call at startup
- * behaves the same whether the app runs from the jar or from {@code mvn spring-boot:run}, and it
- * is obvious where to look when something is not picked up.
- *
- * <p>The file is searched from the working directory upwards, because Maven runs the app from
- * {@code backend/} while {@code .env} belongs at the root of the repository next to
- * {@code .env.example}.
- */
+/** Reads {@code .env} into system properties before Spring starts, searching upwards. */
 public final class Dotenv {
 
     private static final String FILE_NAME = ".env";
@@ -34,11 +21,7 @@ public final class Dotenv {
         load(Paths.get("").toAbsolutePath());
     }
 
-    /**
-     * Values already present in the real environment or as system properties are left alone, so
-     * exporting DASHBOARD_ROOT still overrides the file, which is what you want on a server or
-     * in CI. A missing file is not an error: the variable may simply come from the environment.
-     */
+    /** The real environment and system properties win; a missing file is not an error. */
     static void load(Path startDirectory) {
         find(startDirectory).ifPresent(file -> read(file).forEach((key, value) -> {
             if (System.getenv(key) == null && System.getProperty(key) == null) {

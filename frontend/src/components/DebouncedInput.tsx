@@ -10,13 +10,7 @@ type Props = {
 
 const DEBOUNCE_MS = 400;
 
-/**
- * Types locally and saves once she stops. Sending on every keystroke would write the row a dozen
- * times per note; waiting for blur loses what was typed if the tab is closed first.
- *
- * <p>Shared by the note and the apply link, which want the same behaviour and differ only in what
- * they are called and how wide they are.
- */
+/** Types locally and saves once she stops, so a note is not written on every keystroke. */
 export const DebouncedInput = ({ value, onCommit, className, placeholder, ariaLabel }: Props) => {
     const [draft, setDraft] = useState(value);
     const commit = useRef(onCommit);

@@ -8,10 +8,7 @@ type Props = {
     shown: number;
 };
 
-/**
- * Always keeps the picked value in the list, even when today's board no longer holds it: a filter
- * restored from the last visit would otherwise hide behind a select that reads "all dates".
- */
+/** Keeps the picked value in the list, so a restored filter cannot hide behind "all dates". */
 const options = (values: string[], selected: string) =>
     [...new Set([...values, selected].filter(Boolean))];
 

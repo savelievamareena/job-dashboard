@@ -9,15 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/**
- * The rules deciding which CV answers for a posting.
- *
- * <p>These used to be written against the CSV reader, because that was the only way to reach them.
- * The queue lives in the database now and the reader is four lines of SQL, so the rules are
- * exercised where they actually are. Two of the old cases went with the file and are not repeated
- * here: whether a path means a tailored CV or the core one is decided by the loader and stored in
- * the kind column, and reading a verdict that holds an unquoted comma is the CSV parser's problem.
- */
+/** The rules deciding which CV answers for a posting. */
 class CvChoicesTest {
 
     private static final String CLICKUP = "https://www.linkedin.com/jobs/view/4393492829";
