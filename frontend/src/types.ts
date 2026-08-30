@@ -41,6 +41,7 @@ export type SortKey =
     | "track"
     | "easyApply"
     | "level"
+    | "source"
     | "cv"
     | "status"
     | "applyUrl"

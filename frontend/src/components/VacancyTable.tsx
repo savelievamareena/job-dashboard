@@ -23,6 +23,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "track", label: "Stack" },
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
+    { key: "source", label: "Source" },
     { key: "cv", label: "CV" },
     { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
@@ -150,6 +151,7 @@ export const VacancyTable = ({
                     <td>
                         <ApplyRoute easyApply={vacancy.easyApply} />
                     </td>
+                    <td className="source">{vacancy.source}</td>
                     <td>{vacancy.level}</td>
                     <td>
                         <CvChoice cv={vacancy.cv} />
