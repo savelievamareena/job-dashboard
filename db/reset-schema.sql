@@ -94,18 +94,11 @@ create table vacancy (
     url         text not null,
     company     text,
     title       text,                -- selected.csv or the description cache, else null
-    track       text not null,       -- frontend / fullstack / other-stacks / AI / unsorted
+    track       text,                -- frontend / fullstack / other-stacks / AI / NULL when undetermined (2026-09-01; was NOT NULL with the sentinel 'unsorted')
 
-    -- Normalised at import, so a chart never has to know that the skills wrote node for
-    -- JavaScript or dotnet for C#. Null means the skill did not classify this posting: the
-    -- columns arrived recently, so most older rows have none, and a gap is shown as a gap.
-    --
-    -- No longer what the chart reads (see `job_languages` below) - still exactly one word, for
-    -- the tracks that only ever need one (frontend, other-stacks, ai). A confirmed fullstack
-    -- posting's second language never touches this column: /select-jobs writes it as a second
-    -- row in reclassified.csv instead (same url, one language per row), and db/migrate.py reads
-    -- both straight into two job_languages rows - no delimiter, no string to parse.
-    language    text,
+    -- Languages live in job_languages (see below) - one row per language, first one
+    -- primary. No scalar column: dropped 2026-09-01 (her call) after the link table had
+    -- carried every language since 2026-08-25.
     layer       text,
     ai_kind     text,
 

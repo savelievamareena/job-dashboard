@@ -50,12 +50,20 @@ export type SortKey =
 export type Filters = {
     date: string;
     track: string;
+    source: string;
     easyApply: "" | "yes" | "no";
     status: string;
     query: string;
 };
 
-export const EMPTY_FILTERS: Filters = { date: "", track: "", easyApply: "", status: "", query: "" };
+export const EMPTY_FILTERS: Filters = {
+    date: "",
+    track: "",
+    source: "",
+    easyApply: "",
+    status: "",
+    query: "",
+};
 
 export const NO_STATUS = "none";
 

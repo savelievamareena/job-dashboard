@@ -12,7 +12,7 @@ type Props = {
 const options = (values: string[], selected: string) =>
     [...new Set([...values, selected].filter(Boolean))];
 
-const column = (vacancies: Vacancy[], key: "date" | "track", selected: string) =>
+const column = (vacancies: Vacancy[], key: "date" | "track" | "source", selected: string) =>
     options(
         vacancies.map((vacancy) => vacancy[key]),
         selected,
@@ -48,6 +48,19 @@ export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Pro
                 {column(vacancies, "track", filters.track).map((track) => (
                     <option key={track} value={track}>
                         {track}
+                    </option>
+                ))}
+            </select>
+
+            <select
+                aria-label="Source"
+                value={filters.source}
+                onChange={(event) => set("source", event.target.value)}
+            >
+                <option value="">all sources</option>
+                {column(vacancies, "source", filters.source).map((source) => (
+                    <option key={source} value={source}>
+                        {source}
                     </option>
                 ))}
             </select>

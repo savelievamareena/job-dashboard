@@ -151,8 +151,8 @@ export const VacancyTable = ({
                     <td>
                         <ApplyRoute easyApply={vacancy.easyApply} />
                     </td>
-                    <td className="source">{vacancy.source}</td>
                     <td>{vacancy.level}</td>
+                    <td className="source">{vacancy.source}</td>
                     <td>
                         <CvChoice cv={vacancy.cv} />
                     </td>

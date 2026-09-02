@@ -15,6 +15,7 @@ const clean = (saved: unknown): Filters => {
     return {
         date: text("date"),
         track: text("track"),
+        source: text("source"),
         easyApply: raw.easyApply === "yes" || raw.easyApply === "no" ? raw.easyApply : "",
         status: text("status"),
         query: text("query"),

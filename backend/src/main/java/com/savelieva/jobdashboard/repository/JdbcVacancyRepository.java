@@ -10,7 +10,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class JdbcVacancyRepository implements VacancyRepository {
 
-    /** Dated by posted_at, then the pick day, then found_date; stack only repeated the track. */
+    /** Dated by posted_at, then the pick day, then found_date; stack only repeated the track.
+     *  A selected posting with no title renders as a bare "open the posting" link - nothing to
+     *  screen and nothing to apply to - so it stays off the list (her call, 2026-09-01, after the
+     *  portal-scan ghosts that reached selection through the old unsorted leak). */
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, track, company, title, url,
@@ -18,6 +21,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
                    has_text
             from vacancy
             where is_selected
+              and coalesce(title, '') <> ''
             order by coalesce(posted_at::date, selected_date, found_date) desc, lower(company)
             """;
 

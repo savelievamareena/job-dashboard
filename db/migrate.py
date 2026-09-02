@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Loads the dashboard's file data into Postgres.
 
-One row per posting, keyed by the LinkedIn id out of its URL. A posting seen again on a later
-day updates its row rather than adding one, so the charts count a find once however many days it
-kept showing up. is_selected is raised by the rows that reached selected.csv and is never
+One row per posting, keyed by the LinkedIn id out of its URL - except for justjoin.it and
+nofluffjobs, whose id cannot be read off the URL and is resolved against the row portal_search.py
+already wrote (see emit_vacancy_upsert). A posting seen again on a later day updates its row
+rather than adding one, so the charts count a find once however many days it kept showing up. is_selected is raised by the rows that reached selected.csv and is never
 lowered here — a posting that drops out of the folders keeps the decision made about it.
 
 The board's fields are filled the way the file readers used to read them, so the flagged rows
@@ -28,10 +29,14 @@ import os
 import re
 import sys
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlparse
 
 # Mirrors backend/src/main/resources/application.yml. Kept here rather than parsed out of it:
 # this runs once per import, and a yaml parser is not worth adding for four constants.
 ROOTS = ["DailySearch", "PortalSearch"]
+# The board's source label follows the posting's own domain, not the folder it was parsed
+# from: a jjit mirror caught through the LinkedIn scan still lives on justjoin.it.
+DOMAIN_SOURCES = {"linkedin.com": "linkedin", "justjoin.it": "jjit", "nofluffjobs.com": "nfj"}
 # The tracks a picked posting may reach the board from, which is the two that name a CV core and
 # no more. other-stacks and unsorted were listed here until 2026-08-11 and never once carried a
 # pick: nothing was removed from the board by dropping them, and nothing about the charts changes
@@ -55,12 +60,12 @@ LANGUAGE = {"node": "javascript", "nodejs": "javascript", "typescript": "javascr
             "react": "javascript"}
 # This map only RENAMES; it is read as LAYER.get(value, value), so anything absent passes through
 # unchanged. That is why `fullstack` and `back-ops` are not listed - the skill and the database
-# spell them the same way - while `front`, `back` and the skill's short `ops` are. "unknown" is
-# the skill saying it could not tell - not another real layer, but not None either (2026-08-22):
-# she wants the same word `unsorted` in this column as in `track` for "nobody has decided this
-# yet", rather than one column saying NULL and the other a string for the identical fact.
+# spell them the same way - while `front`, `back` and the skill's short `ops` are. "unknown" and
+# "unsorted" both mean the skill could not tell, and both map to empty: undetermined is NULL in
+# this column and in `track` since her 2026-09-01 migration ("чтобы не было путаницы"; before
+# that both carried the sentinel 'unsorted').
 # The five layers that reach the chart: frontend, backend, fullstack, devops, back-ops.
-LAYER = {"front": "frontend", "back": "backend", "ops": "devops", "unknown": "unsorted"}
+LAYER = {"front": "frontend", "back": "backend", "ops": "devops", "unknown": "", "unsorted": ""}
 
 
 def dashboard_root() -> Path:
@@ -200,7 +205,7 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
         if not root.is_dir():
             print(f"search root {root} does not exist, skipping", file=sys.stderr)
             continue
-        source = root.name.replace("Search", "")
+        source = "linkedin" if root.name == "DailySearch" else root.name.replace("Search", "")
         days = sorted((d for d in root.iterdir()
                        if d.is_dir() and DATE_FOLDER.fullmatch(d.name)), reverse=True)
         for day in days:
@@ -327,7 +332,10 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         "title": first_non_blank(text(record, "job_title"),
                                                  titles.get(identifier, ""),
                                                  column(selected, "title")),
-                        "track": row_track,
+                        # The old unsorted/ day folder is not a track either: "nobody decided
+                        # this" is NULL since the 2026-09-01 migration, not a word that reads as
+                        # a value. Its rows re-enter classification through /classify-jobs.
+                        "track": None if row_track == "unsorted" else row_track,
                         "language": LANGUAGE.get(stack, stack) or None,
                         "layer": LAYER.get(layer, layer) or None,
                         "ai_kind": column(job, "ai_kind").lower() or None,
@@ -338,7 +346,10 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         # this sighting was picked, null when it was only found.
                         "selected_date": day.name if selected is not None else None,
                         "gap": column(selected, "gap") or None,
-                        "source": source or None,
+                        # Derive the label from the URL's own domain, so the board column
+                        # always names the site the link opens (jjit / linkedin / ...).
+                        "source": DOMAIN_SOURCES.get(
+                            (urlparse(url).hostname or "").removeprefix("www."), source) or None,
                         "easy_apply": easy_apply(record),
                         # Written into the cached record by /get-apply-link, one named posting at
                         # a time. Absent for almost every posting, and that is the normal state:
@@ -390,7 +401,7 @@ def collect_cv_queue(root_dir: Path) -> list:
 
 # --- emitting ----------------------------------------------------------------------------------
 
-SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "language", "layer", "ai_kind",
+SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "layer", "ai_kind",
                     "posted_at", "found_date", "is_selected", "selected_date", "gap", "source",
                     "easy_apply", "apply_url", "level", "job_type", "location", "applicants",
                     "has_text"]
@@ -398,7 +409,7 @@ SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "language", "l
 # Everything the newest sighting answers for. found_date, selected_date, is_selected and has_text
 # are aggregated instead: the first is the earliest sighting, the second the latest pick, the
 # other two are ever-true.
-LATEST = ["url", "company", "title", "track", "language", "layer", "ai_kind", "posted_at",
+LATEST = ["url", "company", "title", "track", "layer", "ai_kind", "posted_at",
           "gap", "source", "easy_apply", "apply_url", "level", "job_type", "location",
           "applicants"]
 BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
@@ -413,7 +424,7 @@ BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
 # classification from the folder, and everything else keeps the reading the search made. The one
 # thing that overrules the search is reclassified.csv, and that is applied as its own statement
 # after the upsert, precisely because it has to win.
-CLASSIFICATION = ["track", "language", "layer", "ai_kind"]
+CLASSIFICATION = ["track", "layer", "ai_kind"]
 
 
 def literal(value) -> str:
@@ -468,6 +479,30 @@ create temp table vacancy_load (
 """.strip())
     insert("vacancy_load", SIGHTING_COLUMNS, sightings)
 
+    # A justjoin.it / nofluffjobs posting is keyed in `vacancy` by the SITE's own identifier -
+    # `jjit-<guid>`, `nfj-<id>` - because portal_search.py inserts it there itself, straight from
+    # the portal API. job_id() cannot reconstruct that identifier: the guid is nowhere in the URL,
+    # and even nofluffjobs' id differs from its own URL slug. So the loader derived a slug id
+    # instead and every single load inserted a SECOND row for a posting already on the board.
+    # 40 such pairs existed by 2026-09-01, and on the fullstack run that day the pick landed on
+    # the slug twin for 27 of them - a twin that has no posted_at, so the board dated those by
+    # selected_date instead of by publication.
+    #
+    # Resolved here rather than in job_id(): the url -> site-id mapping only exists in the
+    # database (the cached _descriptions/*.json carry no URL), and this file deliberately emits
+    # SQL rather than connecting, so the lookup has to happen where the rows are. min() keyed by
+    # url makes the choice deterministic if a URL ever carries two prefixed rows.
+    print("""
+update vacancy_load l
+   set job_id = m.job_id
+  from (select url, min(job_id) as job_id
+          from vacancy
+         where job_id ~ '^(jjit|nfj)-'
+         group by url) m
+ where m.url = l.url
+   and m.job_id <> l.job_id;
+""".strip())
+
     def latest(name):
         return (f"(array_agg({name} order by found_date desc, ord desc) "
                 f"filter (where {name} is not null))[1]")
@@ -511,8 +546,21 @@ create temp table vacancy_load (
     # once by hand: a plain UPDATE against Postgres is undone by the next /find-jobs, which is
     # what happened to 15 rows on 2026-08-11.
     for job_id, fix in sorted((corrections or {}).items()):
-        sets = ", ".join(f"{c} = {literal(LANGUAGE.get(v, v) if c == 'language' else v)}"
-                         for c, v in fix.items() if v)
+        # Languages live in job_languages now (her call, 2026-09-01): a correction that
+        # names one rebuilds the posting's link rows - the same delete + rebuild
+        # write_classification() does - instead of updating a scalar column.
+        langs = [v for c, v in fix.items() if v and c == "language"]
+        sets = ", ".join(f"{c} = {literal(v)}" for c, v in fix.items() if v and c != "language")
+        if langs:
+            print(f"delete from job_languages where job_id = {literal(job_id)};")
+            for lang in langs:
+                print(f"insert into languages (name) values ({literal(LANGUAGE.get(lang, lang))}) "
+                      f"on conflict (name) do nothing;")
+            for i, lang in enumerate(langs):
+                print(f"insert into job_languages (job_id, language_id, is_primary) "
+                      f"select {literal(job_id)}, id, {'true' if i == 0 else 'false'} "
+                      f"from languages where name = {literal(LANGUAGE.get(lang, lang))} "
+                      f"on conflict (job_id, language_id) do nothing;")
         if sets:
             print(f"update vacancy set {sets} where job_id = {literal(job_id)};")
 
@@ -527,32 +575,54 @@ create temp table vacancy_load (
     # read - filling it here the same way filled it with the same guess classify() already
     # stopped making. language for a fullstack posting is null until /select-jobs actually opens
     # the description and writes it, same as track='unsorted' works for everything else.
-    print("update vacancy set language = 'javascript' "
-          "where track = 'frontend' and language is null;")
+    # The parser only classifies the other-stacks and ai tracks; frontend is language-scoped too
+    # (her core is React, always), so the folder is the answer. Fills the LINK TABLE, not a
+    # scalar column (her call, 2026-09-01 - the column does not exist any more): a frontend-track
+    # posting with no link rows yet gets one javascript row, is_primary=true.
+    print("insert into languages (name) values ('javascript') on conflict (name) do nothing;")
+    print("insert into job_languages (job_id, language_id, is_primary) "
+          "select v.job_id, l.id, true from vacancy v "
+          "join languages l on l.name = 'javascript' "
+          "where v.track = 'frontend' "
+          "and not exists (select 1 from job_languages jl where jl.job_id = v.job_id);")
+
+    # A vacancy collected twice (slug id from the first portal scan, guid id from the
+    # current one - same URL, two rows) is ONE job. The flag belongs to the row the
+    # board can show: the one with the title. Her rule, 2026-09-01: "дубли не нужно
+    # удалять, просто показывай ту вакансию, которую нашли раньше / по которой больше
+    # информации". The title-less twin keeps its row and its classification - nothing
+    # is deleted; the transfer repeats on every load, so the pair can never drift.
+    # First copy the pick onto the informative row (while the ghost still holds it),
+    # then clear the ghost.
+    print("update vacancy v set is_selected = true, "
+          "selected_date = coalesce(v.selected_date, s.selected_date), "
+          "gap = coalesce(v.gap, s.gap) "
+          "from vacancy s where s.url = v.url and s.title is not null "
+          "and v.title is null and s.is_selected;")
+    print("update vacancy v set is_selected = false, selected_date = null "
+          "where v.title is null and v.is_selected "
+          "and exists (select 1 from vacancy s where s.url = v.url "
+          "and s.title is not null);")
 
 
 def emit_job_languages(language_corrections: dict = None) -> None:
-    """job_languages is never edited directly, so the simplest correct thing on every load is to
-    drop it and rebuild it from two sources:
+    """job_languages is the only language storage (her call, 2026-09-01: the scalar
+    vacancy.language column is dropped). The loader's job here is only to fill holes for
+    postings it inserts from day folders that the search never reached - every other
+    writer (write_classification, the search's own insert) maintains the link rows
+    itself:
 
-    1. vacancy.language - still exactly one word per posting, the way it always was for the
-       tracks that only ever need one (frontend, other-stacks, ai). One row each.
-    2. `language_corrections` - every language a reclassified.csv row named for a posting (see
-       languages_by_url()), which is how a confirmed fullstack posting gets counted under BOTH
-       java and javascript: as two separate rows in the file, never one delimited cell, so there
-       is no string to parse on this side either. `on conflict do nothing` lets the two sources
-       overlap for free.
+    1. `language_corrections` - legacy: languages a reclassified.csv row named for a posting
+       (see languages_by_url()). Nothing WRITES those files any more (the writer was
+       /select-jobs' old section 4a, removed 2026-08-31); corrections now land through
+       write_classification(), which rebuilds the posting's link rows itself.
+    2. The frontend fill below: a frontend-track posting with no link rows yet gets its
+       javascript row - her core is React, always, so the folder is the answer (her call,
+       2026-08-25, after the Boeing posting sat in the fullstack folder for three weeks
+       with a guessed language; the fill never guesses beyond the folder).
 
     See alter-2026-08-25-multi-language-per-vacancy.sql for why the table looks like this.
     """
-    print("delete from job_languages;")
-    print("insert into languages (name) "
-          "select distinct language from vacancy where language is not null "
-          "on conflict (name) do nothing;")
-    print("insert into job_languages (job_id, language_id, is_primary) "
-          "select v.job_id, l.id, true from vacancy v join languages l on l.name = v.language "
-          "where v.language is not null "
-          "on conflict (job_id, language_id) do nothing;")
 
     for job_id, langs in sorted((language_corrections or {}).items()):
         for lang in langs:
