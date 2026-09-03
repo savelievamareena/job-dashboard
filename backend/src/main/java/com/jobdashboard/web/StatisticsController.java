@@ -1,7 +1,7 @@
-package com.savelieva.jobdashboard.web;
+package com.jobdashboard.web;
 
-import com.savelieva.jobdashboard.model.Statistics;
-import com.savelieva.jobdashboard.repository.StatisticsRepository;
+import com.jobdashboard.model.Statistics;
+import com.jobdashboard.repository.StatisticsRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

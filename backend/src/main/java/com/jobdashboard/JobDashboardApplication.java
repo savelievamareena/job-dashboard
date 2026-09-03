@@ -1,7 +1,7 @@
-package com.savelieva.jobdashboard;
+package com.jobdashboard;
 
-import com.savelieva.jobdashboard.config.CvProperties;
-import com.savelieva.jobdashboard.config.Dotenv;
+import com.jobdashboard.config.CvProperties;
+import com.jobdashboard.config.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

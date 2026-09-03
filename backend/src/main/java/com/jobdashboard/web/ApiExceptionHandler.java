@@ -1,7 +1,7 @@
-package com.savelieva.jobdashboard.web;
+package com.jobdashboard.web;
 
-import com.savelieva.jobdashboard.repository.StatusRepository.UnknownPostingException;
-import com.savelieva.jobdashboard.service.VacancyService.InvalidApplyUrlException;
+import com.jobdashboard.repository.StatusRepository.UnknownPostingException;
+import com.jobdashboard.service.VacancyService.InvalidApplyUrlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;

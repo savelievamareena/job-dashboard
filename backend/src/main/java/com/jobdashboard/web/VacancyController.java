@@ -1,8 +1,8 @@
-package com.savelieva.jobdashboard.web;
+package com.jobdashboard.web;
 
-import com.savelieva.jobdashboard.model.JobStatus;
-import com.savelieva.jobdashboard.model.Vacancy;
-import com.savelieva.jobdashboard.service.VacancyService;
+import com.jobdashboard.model.JobStatus;
+import com.jobdashboard.model.Vacancy;
+import com.jobdashboard.service.VacancyService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;

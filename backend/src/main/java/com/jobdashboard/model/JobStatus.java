@@ -1,4 +1,4 @@
-package com.savelieva.jobdashboard.model;
+package com.jobdashboard.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

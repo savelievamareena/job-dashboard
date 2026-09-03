@@ -1,4 +1,4 @@
-package com.savelieva.jobdashboard.model;
+package com.jobdashboard.model;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Locale;

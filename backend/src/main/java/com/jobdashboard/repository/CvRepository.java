@@ -1,8 +1,8 @@
-package com.savelieva.jobdashboard.repository;
+package com.jobdashboard.repository;
 
-import com.savelieva.jobdashboard.config.CvProperties;
-import com.savelieva.jobdashboard.model.CvChoices;
-import com.savelieva.jobdashboard.model.CvKind;
+import com.jobdashboard.config.CvProperties;
+import com.jobdashboard.model.CvChoices;
+import com.jobdashboard.model.CvKind;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;

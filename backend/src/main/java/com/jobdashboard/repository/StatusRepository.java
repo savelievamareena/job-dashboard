@@ -1,6 +1,6 @@
-package com.savelieva.jobdashboard.repository;
+package com.jobdashboard.repository;
 
-import com.savelieva.jobdashboard.model.JobStatus;
+import com.jobdashboard.model.JobStatus;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;

@@ -1,4 +1,4 @@
-package com.savelieva.jobdashboard.config;
+package com.jobdashboard.config;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;

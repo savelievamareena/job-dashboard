@@ -1,6 +1,6 @@
-package com.savelieva.jobdashboard.repository;
+package com.jobdashboard.repository;
 
-import com.savelieva.jobdashboard.model.Vacancy;
+import com.jobdashboard.model.Vacancy;
 import java.util.List;
 
 /** Source of the postings the dashboard shows: only the ones the loader marked is_selected. */

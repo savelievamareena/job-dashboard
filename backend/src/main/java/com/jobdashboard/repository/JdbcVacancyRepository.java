@@ -1,6 +1,6 @@
-package com.savelieva.jobdashboard.repository;
+package com.jobdashboard.repository;
 
-import com.savelieva.jobdashboard.model.Vacancy;
+import com.jobdashboard.model.Vacancy;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;

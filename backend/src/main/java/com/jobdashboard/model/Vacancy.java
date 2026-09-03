@@ -1,4 +1,4 @@
-package com.savelieva.jobdashboard.model;
+package com.jobdashboard.model;
 
 /** One picked posting as the board shows it; every field but {@code url} may be missing. */
 public record Vacancy(

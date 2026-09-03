@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.savelieva</groupId>
+    <groupId>com.jobdashboard</groupId>
     <artifactId>job-dashboard</artifactId>
     <version>1.0.0</version>
     <name>job-dashboard</name>

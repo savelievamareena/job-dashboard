@@ -1,4 +1,4 @@
-package com.savelieva.jobdashboard.config;
+package com.jobdashboard.config;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -1,4 +1,4 @@
-package com.savelieva.jobdashboard.model;
+package com.jobdashboard.model;
 
 import java.util.Locale;
 import java.util.Map;

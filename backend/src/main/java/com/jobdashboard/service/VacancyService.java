@@ -1,11 +1,11 @@
-package com.savelieva.jobdashboard.service;
+package com.jobdashboard.service;
 
-import com.savelieva.jobdashboard.model.CvChoices;
-import com.savelieva.jobdashboard.model.JobStatus;
-import com.savelieva.jobdashboard.model.Vacancy;
-import com.savelieva.jobdashboard.repository.CvRepository;
-import com.savelieva.jobdashboard.repository.StatusRepository;
-import com.savelieva.jobdashboard.repository.VacancyRepository;
+import com.jobdashboard.model.CvChoices;
+import com.jobdashboard.model.JobStatus;
+import com.jobdashboard.model.Vacancy;
+import com.jobdashboard.repository.CvRepository;
+import com.jobdashboard.repository.StatusRepository;
+import com.jobdashboard.repository.VacancyRepository;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;

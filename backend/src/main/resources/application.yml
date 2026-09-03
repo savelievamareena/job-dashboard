@@ -36,4 +36,4 @@ dashboard:
 
 logging:
   level:
-    com.savelieva.jobdashboard: INFO
+    com.jobdashboard: INFO

@@ -1,7 +1,7 @@
-package com.savelieva.jobdashboard.repository;
+package com.jobdashboard.repository;
 
-import com.savelieva.jobdashboard.model.Statistics;
-import com.savelieva.jobdashboard.model.TrendPoint;
+import com.jobdashboard.model.Statistics;
+import com.jobdashboard.model.TrendPoint;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
