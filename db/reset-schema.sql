@@ -87,7 +87,9 @@ begin
     end if;
 end $$;
 
-create table if not exists scan_day (day date primary key);
+-- One row per (day, country): one run scans one country, so a day can hold a Polish scan, a
+-- German one, or both, and each chart needs its own line broken where its own scan is missing.
+create table if not exists scan_day (day date, country text, primary key (day, country));
 
 create table vacancy (
     job_id      text primary key,
@@ -104,6 +106,10 @@ create table vacancy (
 
     posted_at   timestamp,           -- when the posting went up
     found_date  date not null,       -- the day it was first seen
+
+    -- 'poland' / 'germany' / 'uk', the market the run was scanning. No default: an old day folder
+    -- says nothing about its country, and a default would make that silence read as poland.
+    country     text,
 
     -- The board's flag. Only ever raised by an import, never lowered: a posting that drops out
     -- of the folders must not quietly lose the decision to apply to it. Clear it by hand.
@@ -243,14 +249,16 @@ create index cv_queue_company_idx on cv_queue (core, lower(company));
 -- Reads job_languages, not vacancy.language directly - a fullstack posting with two rows there
 -- (java, javascript) counts once in EACH series instead of once in whichever single word used
 -- to sit in the old scalar column. See alter-2026-08-25-multi-language-per-vacancy.sql.
+-- `country` (2026-09-05) is carried, not filtered: the page picks one market at a time.
 create view trend_language as
-select coalesce(v.posted_at::date, v.found_date) as day, l.name as series, count(*)::int as count
+select coalesce(v.posted_at::date, v.found_date) as day, v.country, l.name as series,
+       count(*)::int as count
 from job_languages jl
 join vacancy v on v.job_id = jl.job_id
 join languages l on l.id = jl.language_id
 where l.name not in ('ruby', 'php')
-group by 1, 2
-order by 1, 2;
+group by 1, 2, 3
+order by 1, 3;
 
 -- "unknown" is dropped rather than drawn: it is the skill saying it could not tell, which is
 -- not a fourth layer.
@@ -263,19 +271,21 @@ order by 1, 2;
 -- trend_language. The list is explicit rather than "layer is not null" on purpose: a value the
 -- skill invents by accident should stay off the chart until someone adds it here deliberately.
 create view trend_layer as
-select coalesce(posted_at::date, found_date) as day, layer as series, count(*)::int as count
+select coalesce(posted_at::date, found_date) as day, country, layer as series,
+       count(*)::int as count
 from vacancy
 where layer in ('frontend', 'backend', 'fullstack', 'devops', 'back-ops')
-group by 1, 2
-order by 1, 2;
+group by 1, 2, 3
+order by 1, 3;
 
 -- Placeholder buckets until the categories are pinned down: right now the skill writes ai_kind
 -- only on the postings it fetched under the AI track.
 create view trend_ai as
-select coalesce(posted_at::date, found_date) as day, ai_kind as series, count(*)::int as count
+select coalesce(posted_at::date, found_date) as day, country, ai_kind as series,
+       count(*)::int as count
 from vacancy
 where ai_kind is not null
-group by 1, 2
-order by 1, 2;
+group by 1, 2, 3
+order by 1, 3;
 
 commit;

@@ -209,7 +209,9 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
         days = sorted((d for d in root.iterdir()
                        if d.is_dir() and DATE_FOLDER.fullmatch(d.name)), reverse=True)
         for day in days:
-            scan_days.add(day.name)
+            # (day, country) pairs, filled from the rows below. A folder whose rows name no
+            # country is a folder written before 2026-09-05, and every one of those is Polish.
+            countries: set = set()
             cache = day / "_descriptions"
             titles = read_json(day / "_titles.json")
             # Every track folder on disk, not only the four the board scans: the search now also
@@ -247,6 +249,8 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                     record = read_json(cache / f"{identifier}.json")
                     stack = column(job, "stack").lower()
                     layer = column(job, "layer").lower()
+                    country = column(job, "country").lower()
+                    countries.add(country or "poland")
                     # Every day folder written before 2026-08-11 carries `devops` in the STACK
                     # column, because the skill treated it as a language then. Read literally it
                     # would put devops straight back into `language` on every load and quietly
@@ -340,6 +344,7 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         "layer": LAYER.get(layer, layer) or None,
                         "ai_kind": column(job, "ai_kind").lower() or None,
                         "posted_at": column(job, "posted") or None,
+                        "country": country or None,
                         "found_date": day.name,
                         "is_selected": selected is not None,
                         # A fallback only, for the board's posted_at gap - see reset-schema.sql. The day
@@ -362,6 +367,10 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         "applicants": applicant_count(record),
                         "has_text": (cache / f"{identifier}.txt").is_file(),
                     })
+
+            # An empty day folder still means somebody searched, and that search was Polish.
+            for name in countries or {"poland"}:
+                scan_days.add((day.name, name))
 
     ids = {}
     for s in sightings:
@@ -401,7 +410,7 @@ def collect_cv_queue(root_dir: Path) -> list:
 
 # --- emitting ----------------------------------------------------------------------------------
 
-SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "layer", "ai_kind",
+SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "layer", "ai_kind", "country",
                     "posted_at", "found_date", "is_selected", "selected_date", "gap", "source",
                     "easy_apply", "apply_url", "level", "job_type", "location", "applicants",
                     "has_text"]
@@ -409,7 +418,7 @@ SIGHTING_COLUMNS = ["job_id", "url", "company", "title", "track", "layer", "ai_k
 # Everything the newest sighting answers for. found_date, selected_date, is_selected and has_text
 # are aggregated instead: the first is the earliest sighting, the second the latest pick, the
 # other two are ever-true.
-LATEST = ["url", "company", "title", "track", "layer", "ai_kind", "posted_at",
+LATEST = ["url", "company", "title", "track", "layer", "ai_kind", "country", "posted_at",
           "gap", "source", "easy_apply", "apply_url", "level", "job_type", "location",
           "applicants"]
 BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
@@ -425,6 +434,9 @@ BLANKABLE = ["source", "level", "job_type", "location", "applicants"]
 # thing that overrules the search is reclassified.csv, and that is applied as its own statement
 # after the upsert, precisely because it has to win.
 CLASSIFICATION = ["track", "layer", "ai_kind"]
+# Same treatment for `country`: the search stamps it, jobs.csv files written before 2026-09-05
+# carry no such column, and one of those must not blank a country already known.
+SEARCH_OWNED = CLASSIFICATION + ["country"]
 
 
 def literal(value) -> str:
@@ -462,6 +474,7 @@ create temp table vacancy_load (
     language    text,
     layer       text,
     ai_kind     text,
+    country     text,
     posted_at   timestamp,
     found_date  date not null,
     is_selected boolean not null,
@@ -513,10 +526,10 @@ update vacancy_load l
     picks = [f"    coalesce({latest(c)}, '') as {c}" if c in BLANKABLE
              else f"    {latest(c)} as {c}" for c in LATEST]
     updates = [f"    {c} = coalesce(excluded.{c}, v.{c})"
-               for c in LATEST if c not in BLANKABLE and c not in CLASSIFICATION]
+               for c in LATEST if c not in BLANKABLE and c not in SEARCH_OWNED]
     # Reversed on purpose: the value already in the table wins, and the folder only fills a hole.
-    # See CLASSIFICATION.
-    updates += [f"    {c} = coalesce(v.{c}, excluded.{c})" for c in CLASSIFICATION]
+    # See CLASSIFICATION and SEARCH_OWNED.
+    updates += [f"    {c} = coalesce(v.{c}, excluded.{c})" for c in SEARCH_OWNED]
     updates += [f"    {c} = case when coalesce(excluded.{c}, '') <> '' "
                 f"then excluded.{c} else v.{c} end" for c in BLANKABLE]
     updates += ["    found_date  = least(v.found_date, excluded.found_date)",
@@ -652,7 +665,8 @@ def main() -> None:
     emit_vacancy_upsert(sightings, corrections)
     emit_job_languages(language_corrections)
     # Only ever added to: a day the search ran stays one, even if its folder is later cleaned up.
-    insert("scan_day", ["day"], [{"day": day} for day in sorted(scan_days)],
+    insert("scan_day", ["day", "country"],
+           [{"day": day, "country": country} for day, country in sorted(scan_days)],
            "on conflict do nothing")
     # A small mirror of one file, so it is replaced rather than merged. job_status is deliberately
     # absent from both this truncate and any insert: the board owns that table, and refilling it
