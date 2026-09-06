@@ -13,6 +13,7 @@ const matches = (vacancy: Vacancy, filters: Filters) => {
         (!filters.date || vacancy.date === filters.date) &&
         (!filters.track || vacancy.track === filters.track) &&
         (!filters.source || vacancy.source === filters.source) &&
+        (!filters.country || vacancy.country === filters.country) &&
         (!filters.status || vacancy.status === status) &&
         (!filters.easyApply || vacancy.easyApply === (filters.easyApply === "yes")) &&
         (!filters.query || haystack.includes(filters.query.toLowerCase()))

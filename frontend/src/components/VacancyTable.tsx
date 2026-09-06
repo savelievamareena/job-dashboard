@@ -24,6 +24,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
     { key: "source", label: "Source" },
+    { key: "country", label: "Country" },
     { key: "cv", label: "CV" },
     { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
@@ -153,6 +154,7 @@ export const VacancyTable = ({
                     </td>
                     <td>{vacancy.level}</td>
                     <td className="source">{vacancy.source}</td>
+                    <td className="country">{vacancy.country}</td>
                     <td>
                         <CvChoice cv={vacancy.cv} />
                     </td>

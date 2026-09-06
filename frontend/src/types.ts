@@ -2,6 +2,7 @@
 export type Vacancy = {
     date: string;
     source: string;
+    country: string;
     track: string;
     company: string;
     title: string;
@@ -42,6 +43,7 @@ export type SortKey =
     | "easyApply"
     | "level"
     | "source"
+    | "country"
     | "cv"
     | "status"
     | "applyUrl"
@@ -51,6 +53,7 @@ export type Filters = {
     date: string;
     track: string;
     source: string;
+    country: string;
     easyApply: "" | "yes" | "no";
     status: string;
     query: string;
@@ -60,6 +63,7 @@ export const EMPTY_FILTERS: Filters = {
     date: "",
     track: "",
     source: "",
+    country: "",
     easyApply: "",
     status: "",
     query: "",

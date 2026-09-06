@@ -16,7 +16,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
      *  portal-scan ghosts that reached selection through the old unsorted leak). */
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
-                   source, track, company, title, url,
+                   source, country, track, company, title, url,
                    easy_apply, apply_url, may_submit, level, job_type, location, applicants, gap,
                    has_text
             from vacancy
@@ -29,6 +29,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final RowMapper<Vacancy> VACANCY = (rs, row) -> new Vacancy(
             rs.getString("date"),
             text(rs.getString("source")),
+            text(rs.getString("country")),
             text(rs.getString("track")),
             text(rs.getString("company")),
             text(rs.getString("title")),
