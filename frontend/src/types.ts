@@ -75,9 +75,17 @@ export const NO_STATUS = "none";
 export type TrendPoint = {
     /** The day a posting was first seen; a posting counts once, on that day. */
     day: string;
+    /** The market the search was scanning. The page shows one country at a time. */
+    country: string;
     series: string;
     count: number;
 };
+
+/** The markets /find-jobs can scan, spelled as vacancy.country stores them. */
+export type Country = "poland" | "germany" | "uk";
+
+/** A day a search ran, and where. One run scans one country. */
+export type ScanDay = { day: string; country: string };
 
 /**
  * How far back the statistics page looks. The window ends today, not on the last day the loader
@@ -91,10 +99,11 @@ export type Statistics = {
     layer: TrendPoint[];
     ai: TrendPoint[];
     /**
-     * Days a search actually ran. A day missing here is a day nobody looked, which is drawn as a
-     * break in the line: a zero there would read as "nothing was posted".
+     * Days a search actually ran, per country. A day missing for the chosen country is a day
+     * nobody looked THERE, drawn as a break in the line: a zero would read as "nothing was
+     * posted", and a Polish run says nothing about the German market.
      *
      * @see db/reset-schema.sql - scan_day
      */
-    scanDays: string[];
+    scanDays: ScanDay[];
 };

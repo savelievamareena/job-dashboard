@@ -7,5 +7,5 @@ public record Statistics(
         List<TrendPoint> language,
         List<TrendPoint> layer,
         List<TrendPoint> ai,
-        List<String> scanDays) {
+        List<ScanDay> scanDays) {
 }

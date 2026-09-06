@@ -96,12 +96,13 @@ export const TrendChart = ({ rows, series }: Props) => {
                         stroke={color}
                         strokeWidth={hovered === name ? 3 : 2}
                         strokeOpacity={opacity(name)}
+                        // Filled with the line's own colour and no ring: recharts defaults a dot
+                        // to white, and a white ring on top of the line broke it into dashes.
                         dot={{
-                            r: 3,
-                            strokeWidth: 2,
-                            stroke: "var(--surface-1)",
+                            r: 2.5,
+                            strokeWidth: 0,
+                            fill: color,
                             fillOpacity: opacity(name),
-                            strokeOpacity: opacity(name),
                         }}
                         activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface-1)" }}
                         label={

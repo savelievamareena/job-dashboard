@@ -1,5 +1,6 @@
 package com.jobdashboard.repository;
 
+import com.jobdashboard.model.ScanDay;
 import com.jobdashboard.model.Statistics;
 import com.jobdashboard.model.TrendPoint;
 import java.util.List;
@@ -12,16 +13,20 @@ import org.springframework.stereotype.Repository;
 public class StatisticsRepository {
 
     private static final String LANGUAGE =
-            "select day, series, count from trend_language order by day, series";
+            "select day, country, series, count from trend_language order by day, series";
     private static final String LAYER =
-            "select day, series, count from trend_layer order by day, series";
+            "select day, country, series, count from trend_layer order by day, series";
     private static final String AI =
-            "select day, series, count from trend_ai order by day, series";
-    private static final String SCAN_DAYS = "select day from scan_day order by day";
+            "select day, country, series, count from trend_ai order by day, series";
+    private static final String SCAN_DAYS = "select day, country from scan_day order by day";
 
     /** getString on a date column gives the ISO text Postgres stores, which is what JSON wants. */
-    private static final RowMapper<TrendPoint> POINT = (rs, row) ->
-            new TrendPoint(rs.getString("day"), rs.getString("series"), rs.getInt("count"));
+    private static final RowMapper<TrendPoint> POINT = (rs, row) -> new TrendPoint(
+            rs.getString("day"), rs.getString("country"), rs.getString("series"),
+            rs.getInt("count"));
+
+    private static final RowMapper<ScanDay> SCAN_DAY = (rs, row) ->
+            new ScanDay(rs.getString("day"), rs.getString("country"));
 
     private final JdbcTemplate jdbc;
 
@@ -34,6 +39,6 @@ public class StatisticsRepository {
                 jdbc.query(LANGUAGE, POINT),
                 jdbc.query(LAYER, POINT),
                 jdbc.query(AI, POINT),
-                jdbc.queryForList(SCAN_DAYS, String.class));
+                jdbc.query(SCAN_DAYS, SCAN_DAY));
     }
 }

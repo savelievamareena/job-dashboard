@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { ChartCard } from "@/components/charts/ChartCard";
+import { CountryPicker } from "@/components/charts/CountryPicker";
 import { caption, PeriodPicker, since } from "@/components/charts/PeriodPicker";
 import { TrendChart, type TrendRow, type TrendSeries } from "@/components/charts/TrendChart";
 import { useStatistics } from "@/hooks/useStatistics";
-import type { Period, TrendPoint } from "@/types";
+import type { Country, Period, TrendPoint } from "@/types";
 
 const LANGUAGES = ["javascript", "java", "php", "go", "python", "csharp", "other"];
 const LAYERS = ["frontend", "backend", "fullstack", "devops", "back-ops"];
@@ -99,6 +100,7 @@ const Chart = ({ chart }: { chart: ReturnType<typeof toChart> }) =>
 export const Statistics = () => {
     const { statistics, loading, error } = useStatistics();
     const [period, setPeriod] = useState<Period>("month");
+    const [country, setCountry] = useState<Country>("poland");
 
     const view = useMemo(() => {
         if (!statistics) {
@@ -106,8 +108,11 @@ export const Statistics = () => {
         }
 
         const from = since(period);
-        const within = (points: TrendPoint[]) => points.filter((point) => point.day >= from);
-        const scanDays = statistics.scanDays.filter((day) => day >= from);
+        const within = (points: TrendPoint[]) =>
+            points.filter((point) => point.day >= from && point.country === country);
+        const scanDays = statistics.scanDays
+            .filter((scan) => scan.day >= from && scan.country === country)
+            .map((scan) => scan.day);
         const language = within(statistics.language);
         const layer = within(statistics.layer);
         const ai = within(statistics.ai);
@@ -122,11 +127,12 @@ export const Statistics = () => {
                 ai: total(ai),
             },
         };
-    }, [statistics, period]);
+    }, [statistics, period, country]);
 
     if (loading) {
         return (
             <div className="stats">
+                <CountryPicker country={country} onChange={setCountry} />
                 <PeriodPicker period={period} onChange={setPeriod} />
                 <div className="loader" role="status" aria-label="Загрузка">
                     <span className="spinner" />
@@ -153,12 +159,13 @@ export const Statistics = () => {
 
     return (
         <div className="stats">
+            <CountryPicker country={country} onChange={setCountry} />
             <PeriodPicker period={period} onChange={setPeriod} />
 
             {shown === 0 ? (
                 <p className="banner">
-                    За выбранный период вакансий нет. Возьмите период подлиннее или прогоните
-                    загрузчик.
+                    За выбранный период и страну вакансий нет. Возьмите период подлиннее, другую
+                    страну или прогоните загрузчик.
                 </p>
             ) : (
                 <div className="charts">
