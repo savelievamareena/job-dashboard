@@ -532,7 +532,13 @@ update vacancy_load l
     updates += [f"    {c} = coalesce(v.{c}, excluded.{c})" for c in SEARCH_OWNED]
     updates += [f"    {c} = case when coalesce(excluded.{c}, '') <> '' "
                 f"then excluded.{c} else v.{c} end" for c in BLANKABLE]
-    updates += ["    found_date  = least(v.found_date, excluded.found_date)",
+    updates += [
+                # greatest, not least (her call, 2026-09-08): found_date now means the day a scan
+                # last came back with the posting, not the day it was first seen. Every load
+                # re-reads EVERY dated folder, so least() would drag a re-found posting back to
+                # its oldest CSV and undo the fresh date li_search.py had just written - which is
+                # what max(found_date) is read for, to name the newest scan's batch.
+                "    found_date  = greatest(v.found_date, excluded.found_date)",
                 "    is_selected = v.is_selected or excluded.is_selected",
                 # greatest ignores nulls in Postgres, which is what keeps the last known pick on
                 # a posting whose selected.csv line has since been removed. is_selected is never
@@ -544,7 +550,7 @@ update vacancy_load l
     print("insert into vacancy as v (" + ", ".join(target) + ")")
     print("select job_id,")
     print(separator.join(picks) + ",")
-    print("    min(found_date) as found_date,")
+    print("    max(found_date) as found_date,")
     print("    bool_or(is_selected) as is_selected,")
     print("    max(selected_date) as selected_date,")
     print("    bool_or(has_text) as has_text")
