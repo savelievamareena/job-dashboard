@@ -51,6 +51,9 @@ const toChart = (points: TrendPoint[], series: string[], scanDays: string[]) => 
     const counts = new Map<string, number>();
     const seen = new Set<string>();
     const scanned = new Set(scanDays);
+    // `scan_day` holds the day the RUN happened, the axis is the publication day: a 24h window
+    // catches mostly yesterday's ads. So a day that has rows is observed, scan day or not.
+    const observed = new Set(points.map((point) => point.day));
 
     for (const point of points) {
         const name = bucket(series, point.series);
@@ -72,7 +75,10 @@ const toChart = (points: TrendPoint[], series: string[], scanDays: string[]) => 
         const row: TrendRow = { day };
 
         for (const { name } of present) {
-            row[name] = scanned.has(day) ? (counts.get(`${day}|${name}`) ?? 0) : null;
+            row[name] =
+                scanned.has(day) || observed.has(day)
+                    ? (counts.get(`${day}|${name}`) ?? 0)
+                    : null;
         }
 
         return row;
