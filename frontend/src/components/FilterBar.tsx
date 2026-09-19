@@ -22,6 +22,14 @@ const column = (
         selected,
     ).sort();
 
+const OFF_BOARD_TRACK = "other-stacks";
+
+const tracks = (vacancies: Vacancy[], selected: string) =>
+    options(
+        vacancies.map((vacancy) => vacancy.track).filter((track) => track !== OFF_BOARD_TRACK),
+        selected,
+    ).sort();
+
 export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Props) => {
     const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
         onChange({ ...filters, [key]: value });
@@ -49,7 +57,7 @@ export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Pro
                 onChange={(event) => set("track", event.target.value)}
             >
                 <option value="">all stacks</option>
-                {column(vacancies, "track", filters.track).map((track) => (
+                {tracks(vacancies, filters.track).map((track) => (
                     <option key={track} value={track}>
                         {track}
                     </option>

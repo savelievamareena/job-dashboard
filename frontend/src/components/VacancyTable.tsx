@@ -23,13 +23,22 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "track", label: "Stack" },
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
-    { key: "source", label: "Source" },
     { key: "country", label: "Country" },
     { key: "cv", label: "CV" },
     { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
     { key: "applyUrl", label: "Apply link" },
 ];
+
+const TRACK_LETTER: Record<string, string> = {
+    frontend: "F",
+    fullstack: "B",
+    "other-stacks": "O",
+};
+
+const initial = (value: string) => value.slice(0, 1).toUpperCase();
+
+const trackLetter = (track: string) => TRACK_LETTER[track] ?? initial(track);
 
 const ApplyRoute = ({ easyApply }: { easyApply: boolean | null }) => {
     if (easyApply === null) {
@@ -111,6 +120,7 @@ export const VacancyTable = ({
                 {COLUMNS.map(({ key, label }) => (
                     <th
                         key={key}
+                        className={key}
                         onClick={() => onSort(key)}
                         aria-sort={
                             sortKey === key
@@ -138,23 +148,23 @@ export const VacancyTable = ({
                     <td className="company" title={vacancy.company}>
                         {vacancy.company}
                     </td>
-                    <td>
+                    <td className="title">
                         <a href={vacancy.url} target="_blank" rel="noopener noreferrer">
                             {vacancy.title || "open the posting"}
                         </a>
                         {vacancy.gap && <div className="gap">gap: {vacancy.gap}</div>}
                         {vacancy.location && <div className="location">{vacancy.location}</div>}
                     </td>
-                    <td>
-                        {vacancy.track}
-                        {vacancy.stack && ` / ${vacancy.stack}`}
+                    <td className="track" title={vacancy.track}>
+                        {trackLetter(vacancy.track)}
                     </td>
                     <td>
                         <ApplyRoute easyApply={vacancy.easyApply} />
                     </td>
                     <td>{vacancy.level}</td>
-                    <td className="source">{vacancy.source}</td>
-                    <td className="country">{vacancy.country}</td>
+                    <td className="country" title={vacancy.country}>
+                        {initial(vacancy.country)}
+                    </td>
                     <td>
                         <CvChoice cv={vacancy.cv} />
                     </td>
