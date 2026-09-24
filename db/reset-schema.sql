@@ -141,7 +141,9 @@ create table vacancy (
     job_type    text not null default '',
     location    text not null default '',
     applicants  text not null default '',
-    has_text    boolean not null default false
+    has_text    boolean not null default false,
+    -- The posting text from DailySearch/<day>/_descriptions/<job_id>.txt; null when none was cached.
+    description text
 );
 
 -- Matches the board's one query, ordering included: newest posting first, then company ignoring
