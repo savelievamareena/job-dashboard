@@ -87,18 +87,15 @@ The dashboard reads one database. `db/migrate.py` is what puts the parsing outpu
 the folders `DASHBOARD_ROOT` points at:
 
 ```
-<root>/<date>/_descriptions/<jobId>.json   cached posting record
-<root>/<date>/_descriptions/<jobId>.txt    cached description text
 <root>/<date>/_titles.json                 jobId to title, older days only
 <root>/<date>/<track>/jobs.csv             everything parsed that day
 <root>/<date>/<track>/selected.csv         the ones worth applying to: what the board shows
 ```
 
-Two record shapes appear in the cache, from different parsing runs: the newer one uses `location`,
-`applicants` and `easy_apply`, the older one `job_location` and `applies` with no flag at all. Both
-are read. A missing Easy Apply flag shows as `?`, which is not the same as "external site". The
-`applies` key is ignored where it is zero: it is a default the newer parsing writes on everything,
-never a count, and reading it literally overwrote real applicant numbers with a nought.
+The description text and the posting fields (location, applicants, seniority, employment type,
+Easy Apply) are not loaded from files: they are written into `vacancy` when a description is
+downloaded, and the loader leaves them as they are. A missing Easy Apply flag shows as `?`, which
+is not the same as "external site".
 
 One row in the database is one posting, not one sighting of it. A posting found again on a later
 day updates its row, so the board shows it once however many days it kept turning up. Both the

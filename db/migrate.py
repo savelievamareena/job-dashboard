@@ -85,40 +85,9 @@ def dashboard_root() -> Path:
 
 # --- the readers, field for field with the Java ones -------------------------------------------
 
-def text(record: dict, key: str) -> str:
-    """Jackson's asText("") plus the app's rule that Python wrote its None out as literal text."""
-    value = record.get(key)
-    if value is None:
-        as_text = ""
-    elif isinstance(value, bool):
-        as_text = "true" if value else "false"
-    elif isinstance(value, (int, float, str)):
-        as_text = str(value)
-    else:
-        as_text = ""  # asText on an array or object gives the default, not its contents
-    as_text = as_text.strip()
-    return "" if as_text == "None" else as_text
-
-
 def first_non_blank(*values):
     for value in values:
         if value and value.strip():
-            return value
-    return None
-
-
-def applicant_count(record: dict):
-    """How many have applied, or None where the record does not actually say.
-
-    "applies" is a placeholder, not a count. The newer scrape writes it on every posting and it
-    is zero on all 184 cached records that carry it, while the older "applicants" holds the real
-    text ("80 applicants"). Read literally, a posting seen again under the newer scrape has its
-    real count overwritten by a zero, because the merge below takes the newest sighting that says
-    anything. So a zero here counts as saying nothing.
-    """
-    for key in ("applicants", "applies"):
-        value = text(record, key)
-        if value and value.strip() and value.strip() not in ("0", "0.0"):
             return value
     return None
 
@@ -128,16 +97,6 @@ def column(row, name: str) -> str:
         return ""
     value = row.get(name)
     return value.strip() if value else ""
-
-
-def easy_apply(record: dict):
-    """None keeps "not known" apart from a known "no"; a string is read as Boolean.parseBoolean."""
-    value = record.get("easy_apply")
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str) and value.strip():
-        return value.lower() == "true"
-    return None
 
 
 def job_id(url: str) -> str:
@@ -212,7 +171,6 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
             # (day, country) pairs, filled from the rows below. A folder whose rows name no
             # country is a folder written before 2026-09-05, and every one of those is Polish.
             countries: set = set()
-            cache = day / "_descriptions"
             titles = read_json(day / "_titles.json")
             # Every track folder on disk, not only the four the board scans: the search now also
             # writes an "ai" track, and the charts count what was found, not what the board lists.
@@ -246,7 +204,6 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                 for url in list(found) + [u for u in picked if u not in found]:
                     job, selected = found.get(url), picked.get(url)
                     identifier = job_id(url)
-                    record = read_json(cache / f"{identifier}.json")
                     stack = column(job, "stack").lower()
                     layer = column(job, "layer").lower()
                     country = column(job, "country").lower()
@@ -333,8 +290,7 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         # board already shows.
                         "company": first_non_blank(column(selected, "company"),
                                                    column(job, "company")),
-                        "title": first_non_blank(text(record, "job_title"),
-                                                 titles.get(identifier, ""),
+                        "title": first_non_blank(titles.get(identifier, ""),
                                                  column(selected, "title")),
                         # The old unsorted/ day folder is not a track either: "nobody decided
                         # this" is NULL since the 2026-09-01 migration, not a word that reads as
@@ -355,17 +311,15 @@ def collect_sightings(root_dir: Path, notes: dict, scan_days: set,
                         # always names the site the link opens (jjit / linkedin / ...).
                         "source": DOMAIN_SOURCES.get(
                             (urlparse(url).hostname or "").removeprefix("www."), source) or None,
-                        "easy_apply": easy_apply(record),
-                        # Written into the cached record by /get-apply-link, one named posting at
-                        # a time. Absent for almost every posting, and that is the normal state:
-                        # null here means nobody has paid to ask yet.
-                        "apply_url": text(record, "apply_url") or None,
-                        "level": text(record, "experience_level") or None,
-                        "job_type": text(record, "job_type") or None,
-                        "location": first_non_blank(text(record, "location"),
-                                                    text(record, "job_location")),
-                        "applicants": applicant_count(record),
-                        "has_text": (cache / f"{identifier}.txt").is_file(),
+                        # Posting fields and descriptions live in `vacancy` itself, written
+                        # when a description is downloaded; the loader leaves them alone.
+                        "easy_apply": None,
+                        "apply_url": None,
+                        "level": None,
+                        "job_type": None,
+                        "location": None,
+                        "applicants": None,
+                        "has_text": False,
                     })
 
             # An empty day folder still means somebody searched, and that search was Polish.
@@ -502,7 +456,7 @@ create temp table vacancy_load (
     # selected_date instead of by publication.
     #
     # Resolved here rather than in job_id(): the url -> site-id mapping only exists in the
-    # database (the cached _descriptions/*.json carry no URL), and this file deliberately emits
+    # database, and this file deliberately emits
     # SQL rather than connecting, so the lookup has to happen where the rows are. min() keyed by
     # url makes the choice deterministic if a URL ever carries two prefixed rows.
     print("""
@@ -558,6 +512,9 @@ update vacancy_load l
     print("group by job_id")
     print("on conflict (job_id) do update set")
     print(separator.join(updates) + ";")
+    # has_text says whether the table holds the description text.
+    print("update vacancy set has_text = (description is not null) "
+          "where has_text is distinct from (description is not null);")
 
     # Somebody read the actual description and found the search wrong. This is the ONE thing that
     # overrules the search's own classification, so it is a statement of its own, after the upsert

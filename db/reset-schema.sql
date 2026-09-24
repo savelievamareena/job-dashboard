@@ -9,8 +9,8 @@
 -- which is what the trend charts count by.
 --
 --   vacancy    <- <root>/<date>/<track>/jobs.csv, the full find, with is_selected raised for the
---                 rows that also appear in selected.csv; enriched from _titles.json and the
---                 _descriptions cache
+--                 rows that also appear in selected.csv; enriched from _titles.json. The
+--                 description and the posting fields are written by the description download
 --   job_status <- nothing. The application owns it; see the table for why.
 --   cv_queue   <- cv-tailored/<core>/review-queue.csv
 --
@@ -142,7 +142,7 @@ create table vacancy (
     location    text not null default '',
     applicants  text not null default '',
     has_text    boolean not null default false,
-    -- The posting text from DailySearch/<day>/_descriptions/<job_id>.txt; null when none was cached.
+    -- The posting text, written when the description is downloaded; null until then.
     description text
 );
 
