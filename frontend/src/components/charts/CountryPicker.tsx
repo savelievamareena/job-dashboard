@@ -9,6 +9,7 @@ export const COUNTRIES: { key: Country; label: string }[] = [
     { key: "poland", label: "польша" },
     { key: "germany", label: "германия" },
     { key: "uk", label: "британия" },
+    { key: "netherlands", label: "нидерланды" },
 ];
 
 type Props = {
@@ -17,7 +18,7 @@ type Props = {
 };
 
 /**
- * Same buttons as PeriodPicker, for the same reason: three one-word options, and the chosen one
+ * Same buttons as PeriodPicker, for the same reason: a few one-word options, and the chosen one
  * has to stay readable while the charts under it are being compared.
  *
  * One country at a time and no "all" option: a run scans one country, so consecutive days on a
