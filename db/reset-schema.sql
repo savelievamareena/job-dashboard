@@ -137,6 +137,9 @@ create table vacancy (
     -- month, so it is filled one named posting at a time and never in bulk. See
     -- alter-2026-08-12-apply-url.sql.
     apply_url   text,
+    -- Where the CV can also be emailed, read on the posting or the company's own page by
+    -- /cv-automation; never a guessed address. See alter-2026-09-28-cv-email.sql.
+    cv_email    text,
     may_submit  boolean not null default false,
     level       text not null default '',
     job_type    text not null default '',

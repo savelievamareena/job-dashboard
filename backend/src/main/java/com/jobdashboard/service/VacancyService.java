@@ -56,6 +56,16 @@ public class VacancyService {
         return value;
     }
 
+    /** Stores the CV email address; blank clears it, anything not an address is refused. */
+    public String updateCvEmail(String url, String cvEmail) {
+        String value = cvEmail == null ? "" : cvEmail.strip();
+        if (!value.isEmpty() && !value.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
+            throw new InvalidCvEmailException(value);
+        }
+        vacancies.saveCvEmail(url, value);
+        return value;
+    }
+
     public boolean updateMaySubmit(String url, boolean maySubmit) {
         vacancies.saveMaySubmit(url, maySubmit);
         return maySubmit;
@@ -67,6 +77,13 @@ public class VacancyService {
             return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
         } catch (IllegalArgumentException e) {
             return false;
+        }
+    }
+
+    /** What arrived in the CV email box was not an email address. */
+    public static class InvalidCvEmailException extends RuntimeException {
+        public InvalidCvEmailException(String value) {
+            super("not an email address: " + value);
         }
     }
 

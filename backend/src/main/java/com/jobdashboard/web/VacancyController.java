@@ -39,6 +39,12 @@ public class VacancyController {
         return new ApplyUrlResponse(service.updateApplyUrl(request.url(), request.applyUrl()));
     }
 
+    /** Where the CV can also be emailed, found by /cv-automation or typed in by hand. */
+    @PutMapping("/vacancies/cv-email")
+    public CvEmailResponse updateCvEmail(@Valid @RequestBody CvEmailUpdateRequest request) {
+        return new CvEmailResponse(service.updateCvEmail(request.url(), request.cvEmail()));
+    }
+
     @PutMapping("/vacancies/may-submit")
     public MaySubmitResponse updateMaySubmit(@Valid @RequestBody MaySubmitUpdateRequest request) {
         return new MaySubmitResponse(service.updateMaySubmit(request.url(), request.maySubmit()));
@@ -51,6 +57,10 @@ public class VacancyController {
     public record ApplyUrlUpdateRequest(@NotBlank String url, String applyUrl) {}
 
     public record ApplyUrlResponse(String applyUrl) {}
+
+    public record CvEmailUpdateRequest(@NotBlank String url, String cvEmail) {}
+
+    public record CvEmailResponse(String cvEmail) {}
 
     public record MaySubmitUpdateRequest(@NotBlank String url, boolean maySubmit) {}
 

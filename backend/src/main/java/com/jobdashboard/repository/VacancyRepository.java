@@ -12,5 +12,8 @@ public interface VacancyRepository {
     /** Stores where the Apply button leads, as pasted on the board. Null or blank clears it. */
     void saveApplyUrl(String url, String applyUrl);
 
+    /** Stores the address the CV can be emailed to. Null or blank clears it. */
+    void saveCvEmail(String url, String cvEmail);
+
     void saveMaySubmit(String url, boolean maySubmit);
 }
