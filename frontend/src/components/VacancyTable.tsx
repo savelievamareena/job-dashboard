@@ -9,7 +9,7 @@ type Props = {
     onSort: (key: SortKey) => void;
     onUpdate: (
         url: string,
-        patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "maySubmit">>,
+        patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "cvEmail" | "maySubmit">>,
     ) => void;
 };
 
@@ -23,11 +23,13 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "track", label: "Stack" },
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
+    { key: "source", label: "Source" },
     { key: "country", label: "Country" },
     { key: "cv", label: "CV" },
     { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
     { key: "applyUrl", label: "Apply link" },
+    { key: "cvEmail", label: "CV email" },
 ];
 
 const TRACK_LETTER: Record<string, string> = {
@@ -88,6 +90,32 @@ const ApplyLinkCell = ({
             ariaLabel={`Apply link for ${company}`}
             placeholder="paste apply link"
             value={applyUrl}
+            onCommit={onCommit}
+        />
+    </div>
+);
+
+/** Where the CV can also be emailed; the address above the box opens a new mail. */
+const CvEmailCell = ({
+    cvEmail,
+    company,
+    onCommit,
+}: {
+    cvEmail: string;
+    company: string;
+    onCommit: (cvEmail: string) => void;
+}) => (
+    <div className="apply-cell">
+        {cvEmail && (
+            <a className="apply-link" href={`mailto:${cvEmail}`} title={cvEmail}>
+                {cvEmail}
+            </a>
+        )}
+        <DebouncedInput
+            className="apply-input"
+            ariaLabel={`CV email for ${company}`}
+            placeholder="paste email"
+            value={cvEmail}
             onCommit={onCommit}
         />
     </div>
@@ -162,6 +190,7 @@ export const VacancyTable = ({
                         <ApplyRoute easyApply={vacancy.easyApply} />
                     </td>
                     <td>{vacancy.level}</td>
+                    <td className="source">{vacancy.source}</td>
                     <td className="country" title={vacancy.country}>
                         {initial(vacancy.country)}
                     </td>
@@ -198,6 +227,13 @@ export const VacancyTable = ({
                             applyUrl={vacancy.applyUrl}
                             company={vacancy.company}
                             onCommit={(applyUrl) => onUpdate(vacancy.url, { applyUrl })}
+                        />
+                    </td>
+                    <td>
+                        <CvEmailCell
+                            cvEmail={vacancy.cvEmail}
+                            company={vacancy.company}
+                            onCommit={(cvEmail) => onUpdate(vacancy.url, { cvEmail })}
                         />
                     </td>
                     <td>

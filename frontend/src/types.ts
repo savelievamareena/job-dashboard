@@ -16,6 +16,11 @@ export type Vacancy = {
      * on 2026-08-13, so the board is now where it gets typed in by hand.
      */
     applyUrl: string;
+    /**
+     * Where the CV can also be emailed, read on the posting or the company's own page by
+     * /cv-automation, or typed in here. Empty means nothing was found, never a guessed address.
+     */
+    cvEmail: string;
     maySubmit: boolean;
     level: string;
     jobType: string;
@@ -42,10 +47,12 @@ export type SortKey =
     | "track"
     | "easyApply"
     | "level"
+    | "source"
     | "country"
     | "cv"
     | "status"
     | "applyUrl"
+    | "cvEmail"
     | "maySubmit";
 
 export type Filters = {
