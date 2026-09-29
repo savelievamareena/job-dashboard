@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Loads the dashboard's file data into Postgres.
 
-One row per posting, keyed by the LinkedIn id out of its URL - except for justjoin.it and
-nofluffjobs, whose id cannot be read off the URL and is resolved against the row portal_search.py
+One row per posting, keyed by the LinkedIn id out of its URL - except for justjoin.it,
+nofluffjobs and pracuj.pl, whose id cannot be read off the URL and is resolved against the row portal_search.py
 already wrote (see emit_vacancy_upsert). A posting seen again on a later day updates its row
 rather than adding one, so the charts count a find once however many days it kept showing up. is_selected is raised by the rows that reached selected.csv and is never
 lowered here — a posting that drops out of the folders keeps the decision made about it.
@@ -36,7 +36,8 @@ from urllib.parse import urlparse
 ROOTS = ["DailySearch", "PortalSearch"]
 # The board's source label follows the posting's own domain, not the folder it was parsed
 # from: a jjit mirror caught through the LinkedIn scan still lives on justjoin.it.
-DOMAIN_SOURCES = {"linkedin.com": "linkedin", "justjoin.it": "jjit", "nofluffjobs.com": "nfj"}
+DOMAIN_SOURCES = {"linkedin.com": "linkedin", "justjoin.it": "jjit", "nofluffjobs.com": "nfj",
+                  "pracuj.pl": "pracuj"}
 # The tracks a picked posting may reach the board from, which is the two that name a CV core and
 # no more. other-stacks and unsorted were listed here until 2026-08-11 and never once carried a
 # pick: nothing was removed from the board by dropping them, and nothing about the charts changes
@@ -446,8 +447,8 @@ create temp table vacancy_load (
 """.strip())
     insert("vacancy_load", SIGHTING_COLUMNS, sightings)
 
-    # A justjoin.it / nofluffjobs posting is keyed in `vacancy` by the SITE's own identifier -
-    # `jjit-<guid>`, `nfj-<id>` - because portal_search.py inserts it there itself, straight from
+    # A justjoin.it / nofluffjobs / pracuj.pl posting is keyed in `vacancy` by the SITE's own
+    # identifier - `jjit-<guid>`, `nfj-<id>`, `pracuj-<groupId>` - because portal_search.py inserts it there itself, straight from
     # the portal API. job_id() cannot reconstruct that identifier: the guid is nowhere in the URL,
     # and even nofluffjobs' id differs from its own URL slug. So the loader derived a slug id
     # instead and every single load inserted a SECOND row for a posting already on the board.
@@ -464,7 +465,7 @@ update vacancy_load l
    set job_id = m.job_id
   from (select url, min(job_id) as job_id
           from vacancy
-         where job_id ~ '^(jjit|nfj)-'
+         where job_id ~ '^(jjit|nfj|pracuj)-'
          group by url) m
  where m.url = l.url
    and m.job_id <> l.job_id;
