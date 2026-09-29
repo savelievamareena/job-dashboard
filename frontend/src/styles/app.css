@@ -77,6 +77,11 @@ button {
     margin-left: auto;
 }
 
+/* The table is wider than a laptop screen: it scrolls sideways on its own, the page does not. */
+.table-scroll {
+    overflow-x: auto;
+}
+
 table {
     border-collapse: collapse;
     width: 100%;
@@ -93,6 +98,8 @@ td {
 th {
     position: sticky;
     top: 0;
+    /* Faded tags and greyed rows are stacked by their opacity and would paint over it. */
+    z-index: 1;
     background: Canvas;
     cursor: pointer;
     white-space: nowrap;

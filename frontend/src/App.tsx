@@ -70,14 +70,16 @@ export const App = () => {
                                 : "no vacancy matches these filters"}
                         </p>
                     ) : (
-                        <VacancyTable
-                            vacancies={shown}
-                            statuses={statuses}
-                            sortKey={sortKey}
-                            sortDir={sortDir}
-                            onSort={sortBy}
-                            onUpdate={update}
-                        />
+                        <div className="table-scroll">
+                            <VacancyTable
+                                vacancies={shown}
+                                statuses={statuses}
+                                sortKey={sortKey}
+                                sortDir={sortDir}
+                                onSort={sortBy}
+                                onUpdate={update}
+                            />
+                        </div>
                     )}
                 </>
             )}
