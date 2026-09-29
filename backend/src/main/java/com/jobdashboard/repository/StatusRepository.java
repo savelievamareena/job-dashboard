@@ -17,15 +17,23 @@ public class StatusRepository {
             join vacancy v on v.job_id = s.job_id
             """;
 
+    /**
+     * The one posting a board url names. A LinkedIn job_id is the tail of its url; a portal one
+     * (jjit-, nfj-, pracuj-) is the site's own id and appears nowhere in it, so the url decides.
+     */
+    static final String POSTING = "(job_id = ? or url = ?)";
+
     /** Selecting job_id from vacancy makes an unknown posting write no row, not fail. */
     private static final String UPSERT = """
             insert into job_status (job_id, status, note)
-            select v.job_id, ?, ? from vacancy v where v.job_id = ?
+            select v.job_id, ?, ? from vacancy v where %s
             on conflict (job_id) do update set status = excluded.status, note = excluded.note
-            """;
+            """.formatted(POSTING);
 
     /** An emptied mark leaves no row, the same way it left no key in the file. */
-    private static final String DELETE = "delete from job_status where job_id = ?";
+    private static final String DELETE =
+            "delete from job_status where job_id in (select job_id from vacancy where %s)"
+                    .formatted(POSTING);
 
     private final JdbcTemplate jdbc;
 
@@ -51,10 +59,10 @@ public class StatusRepository {
         if (status.isEmpty()) {
             // Nothing to clear is not a failure: an untouched posting has no row to begin with,
             // so clearing it twice has to be as harmless as clearing it once.
-            jdbc.update(DELETE, jobId);
+            jdbc.update(DELETE, jobId, url);
             return;
         }
-        if (jdbc.update(UPSERT, status.status(), status.note(), jobId) == 0) {
+        if (jdbc.update(UPSERT, status.status(), status.note(), jobId, url) == 0) {
             throw new UnknownPostingException(url);
         }
     }

@@ -6,7 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-/** Reads the picked postings, one row each; only apply_url and may_submit are written here. */
+/** Reads the picked postings, one row each; only apply_url, cv_email and may_submit are written. */
 @Repository
 public class JdbcVacancyRepository implements VacancyRepository {
 
@@ -17,8 +17,8 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, country, track, company, title, url,
-                   easy_apply, apply_url, may_submit, level, job_type, location, applicants, gap,
-                   has_text
+                   easy_apply, apply_url, cv_email, may_submit, level, job_type, location,
+                   applicants, gap, has_text
             from vacancy
             where is_selected
               and coalesce(title, '') <> ''
@@ -37,6 +37,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
             "",
             rs.getObject("easy_apply", Boolean.class),
             text(rs.getString("apply_url")),
+            text(rs.getString("cv_email")),
             rs.getBoolean("may_submit"),
             text(rs.getString("level")),
             text(rs.getString("job_type")),
@@ -48,10 +49,14 @@ public class JdbcVacancyRepository implements VacancyRepository {
             "",
             "");
 
-    private static final String SAVE_APPLY_URL = "update vacancy set apply_url = ? where job_id = ?";
+    private static final String SAVE_APPLY_URL =
+            "update vacancy set apply_url = ? where " + StatusRepository.POSTING;
+
+    private static final String SAVE_CV_EMAIL =
+            "update vacancy set cv_email = ? where " + StatusRepository.POSTING;
 
     private static final String SAVE_MAY_SUBMIT =
-            "update vacancy set may_submit = ? where job_id = ?";
+            "update vacancy set may_submit = ? where " + StatusRepository.POSTING;
 
     private static String text(String value) {
         return value == null ? "" : value;
@@ -72,14 +77,22 @@ public class JdbcVacancyRepository implements VacancyRepository {
     @Override
     public void saveApplyUrl(String url, String applyUrl) {
         String value = applyUrl == null || applyUrl.isBlank() ? null : applyUrl.strip();
-        if (jdbc.update(SAVE_APPLY_URL, value, StatusRepository.jobId(url)) == 0) {
+        if (jdbc.update(SAVE_APPLY_URL, value, StatusRepository.jobId(url), url) == 0) {
+            throw new StatusRepository.UnknownPostingException(url);
+        }
+    }
+
+    @Override
+    public void saveCvEmail(String url, String cvEmail) {
+        String value = cvEmail == null || cvEmail.isBlank() ? null : cvEmail.strip();
+        if (jdbc.update(SAVE_CV_EMAIL, value, StatusRepository.jobId(url), url) == 0) {
             throw new StatusRepository.UnknownPostingException(url);
         }
     }
 
     @Override
     public void saveMaySubmit(String url, boolean maySubmit) {
-        if (jdbc.update(SAVE_MAY_SUBMIT, maySubmit, StatusRepository.jobId(url)) == 0) {
+        if (jdbc.update(SAVE_MAY_SUBMIT, maySubmit, StatusRepository.jobId(url), url) == 0) {
             throw new StatusRepository.UnknownPostingException(url);
         }
     }
