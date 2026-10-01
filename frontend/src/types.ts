@@ -17,10 +17,11 @@ export type Vacancy = {
      */
     applyUrl: string;
     /**
-     * Where the CV can also be emailed, read on the posting or the company's own page by
-     * /cv-automation, or typed in here. Empty means nothing was found, never a guessed address.
+     * Who to reach about the posting: the recruiter's LinkedIn profile, read on the posting or the
+     * company's LinkedIn page by /cv-automation, or a link or address typed in here. Empty means
+     * nothing was found, never a guessed person.
      */
-    cvEmail: string;
+    contact: string;
     maySubmit: boolean;
     level: string;
     jobType: string;
@@ -52,7 +53,7 @@ export type SortKey =
     | "cv"
     | "status"
     | "applyUrl"
-    | "cvEmail"
+    | "contact"
     | "maySubmit";
 
 export type Filters = {

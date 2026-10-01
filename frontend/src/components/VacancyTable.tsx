@@ -9,7 +9,7 @@ type Props = {
     onSort: (key: SortKey) => void;
     onUpdate: (
         url: string,
-        patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "cvEmail" | "maySubmit">>,
+        patch: Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "contact" | "maySubmit">>,
     ) => void;
 };
 
@@ -29,7 +29,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
     { key: "applyUrl", label: "Apply link" },
-    { key: "cvEmail", label: "CV email" },
+    { key: "contact", label: "Contact" },
 ];
 
 const TRACK_LETTER: Record<string, string> = {
@@ -95,27 +95,48 @@ const ApplyLinkCell = ({
     </div>
 );
 
-/** Where the CV can also be emailed; the address above the box opens a new mail. */
-const CvEmailCell = ({
-    cvEmail,
+/** A LinkedIn profile shows its /in/ name; any other link its host, an address stays as it is. */
+const contactLabel = (contact: string) => {
+    if (!/^https?:\/\//i.test(contact)) {
+        return contact;
+    }
+
+    const profile = contact.match(/linkedin\.com\/in\/([^/?#]+)/i);
+    return profile ? decodeURIComponent(profile[1]) : host(contact);
+};
+
+/** Who to reach about the posting; the link above the box opens the profile or a new mail. */
+const ContactCell = ({
+    contact,
     company,
     onCommit,
 }: {
-    cvEmail: string;
+    contact: string;
     company: string;
-    onCommit: (cvEmail: string) => void;
+    onCommit: (contact: string) => void;
 }) => (
     <div className="apply-cell">
-        {cvEmail && (
-            <a className="apply-link" href={`mailto:${cvEmail}`} title={cvEmail}>
-                {cvEmail}
-            </a>
-        )}
+        {contact &&
+            (/^https?:\/\//i.test(contact) ? (
+                <a
+                    className="apply-link"
+                    href={contact}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={contact}
+                >
+                    {contactLabel(contact)}
+                </a>
+            ) : (
+                <a className="apply-link" href={`mailto:${contact}`} title={contact}>
+                    {contact}
+                </a>
+            ))}
         <DebouncedInput
             className="apply-input"
-            ariaLabel={`CV email for ${company}`}
-            placeholder="paste email"
-            value={cvEmail}
+            ariaLabel={`Contact for ${company}`}
+            placeholder="paste profile link"
+            value={contact}
             onCommit={onCommit}
         />
     </div>
@@ -230,10 +251,10 @@ export const VacancyTable = ({
                         />
                     </td>
                     <td>
-                        <CvEmailCell
-                            cvEmail={vacancy.cvEmail}
+                        <ContactCell
+                            contact={vacancy.contact}
                             company={vacancy.company}
-                            onCommit={(cvEmail) => onUpdate(vacancy.url, { cvEmail })}
+                            onCommit={(contact) => onUpdate(vacancy.url, { contact })}
                         />
                     </td>
                     <td>

@@ -2,7 +2,7 @@ package com.jobdashboard.web;
 
 import com.jobdashboard.repository.StatusRepository.UnknownPostingException;
 import com.jobdashboard.service.VacancyService.InvalidApplyUrlException;
-import com.jobdashboard.service.VacancyService.InvalidCvEmailException;
+import com.jobdashboard.service.VacancyService.InvalidContactException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -51,12 +51,12 @@ public class ApiExceptionHandler {
                 "это не ссылка: адрес должен начинаться с http:// или https://");
     }
 
-    /** Not an email address: same kind of mistake as a bad link, shown next to the table. */
-    @ExceptionHandler(InvalidCvEmailException.class)
-    public ResponseEntity<String> invalidCvEmail(InvalidCvEmailException e) {
+    /** Neither a link nor an address: same kind of mistake as a bad link, shown by the table. */
+    @ExceptionHandler(InvalidContactException.class)
+    public ResponseEntity<String> invalidContact(InvalidContactException e) {
         log.info("{}", e.getMessage());
         return text(HttpStatus.BAD_REQUEST,
-                "это не адрес почты: нужен вид name@company.com");
+                "это не контакт: нужна ссылка https://... или адрес name@company.com");
     }
 
     private ResponseEntity<String> text(HttpStatus status, String body) {

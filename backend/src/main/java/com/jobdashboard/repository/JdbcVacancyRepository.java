@@ -6,7 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-/** Reads the picked postings, one row each; only apply_url, cv_email and may_submit are written. */
+/** Reads the picked postings, one row each; only apply_url, contact and may_submit are written. */
 @Repository
 public class JdbcVacancyRepository implements VacancyRepository {
 
@@ -17,7 +17,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, country, track, company, title, url,
-                   easy_apply, apply_url, cv_email, may_submit, level, job_type, location,
+                   easy_apply, apply_url, contact, may_submit, level, job_type, location,
                    applicants, gap, has_text
             from vacancy
             where is_selected
@@ -37,7 +37,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
             "",
             rs.getObject("easy_apply", Boolean.class),
             text(rs.getString("apply_url")),
-            text(rs.getString("cv_email")),
+            text(rs.getString("contact")),
             rs.getBoolean("may_submit"),
             text(rs.getString("level")),
             text(rs.getString("job_type")),
@@ -52,8 +52,8 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final String SAVE_APPLY_URL =
             "update vacancy set apply_url = ? where " + StatusRepository.POSTING;
 
-    private static final String SAVE_CV_EMAIL =
-            "update vacancy set cv_email = ? where " + StatusRepository.POSTING;
+    private static final String SAVE_CONTACT =
+            "update vacancy set contact = ? where " + StatusRepository.POSTING;
 
     private static final String SAVE_MAY_SUBMIT =
             "update vacancy set may_submit = ? where " + StatusRepository.POSTING;
@@ -83,9 +83,9 @@ public class JdbcVacancyRepository implements VacancyRepository {
     }
 
     @Override
-    public void saveCvEmail(String url, String cvEmail) {
-        String value = cvEmail == null || cvEmail.isBlank() ? null : cvEmail.strip();
-        if (jdbc.update(SAVE_CV_EMAIL, value, StatusRepository.jobId(url), url) == 0) {
+    public void saveContact(String url, String contact) {
+        String value = contact == null || contact.isBlank() ? null : contact.strip();
+        if (jdbc.update(SAVE_CONTACT, value, StatusRepository.jobId(url), url) == 0) {
             throw new StatusRepository.UnknownPostingException(url);
         }
     }

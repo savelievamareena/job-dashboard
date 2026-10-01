@@ -35,11 +35,11 @@ export const saveApplyUrl = async (url: string, applyUrl: string): Promise<void>
 };
 
 /** A column of `vacancy` like the apply link, so it is written on its own too. */
-export const saveCvEmail = async (url: string, cvEmail: string): Promise<void> => {
-    const response = await fetch("/api/vacancies/cv-email", {
+export const saveContact = async (url: string, contact: string): Promise<void> => {
+    const response = await fetch("/api/vacancies/contact", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, cvEmail }),
+        body: JSON.stringify({ url, contact }),
     });
 
     if (!response.ok) {

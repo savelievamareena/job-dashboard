@@ -39,10 +39,10 @@ public class VacancyController {
         return new ApplyUrlResponse(service.updateApplyUrl(request.url(), request.applyUrl()));
     }
 
-    /** Where the CV can also be emailed, found by /cv-automation or typed in by hand. */
-    @PutMapping("/vacancies/cv-email")
-    public CvEmailResponse updateCvEmail(@Valid @RequestBody CvEmailUpdateRequest request) {
-        return new CvEmailResponse(service.updateCvEmail(request.url(), request.cvEmail()));
+    /** The recruiter's LinkedIn profile found by /cv-automation, or a contact typed in by hand. */
+    @PutMapping("/vacancies/contact")
+    public ContactResponse updateContact(@Valid @RequestBody ContactUpdateRequest request) {
+        return new ContactResponse(service.updateContact(request.url(), request.contact()));
     }
 
     @PutMapping("/vacancies/may-submit")
@@ -58,9 +58,9 @@ public class VacancyController {
 
     public record ApplyUrlResponse(String applyUrl) {}
 
-    public record CvEmailUpdateRequest(@NotBlank String url, String cvEmail) {}
+    public record ContactUpdateRequest(@NotBlank String url, String contact) {}
 
-    public record CvEmailResponse(String cvEmail) {}
+    public record ContactResponse(String contact) {}
 
     public record MaySubmitUpdateRequest(@NotBlank String url, boolean maySubmit) {}
 

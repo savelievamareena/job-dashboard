@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
     fetchVacancies,
     saveApplyUrl,
-    saveCvEmail,
+    saveContact,
     saveMaySubmit,
     saveStatus,
 } from "@/api/vacancies";
@@ -15,7 +15,7 @@ type State = {
     error: string | null;
 };
 
-type Patch = Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "cvEmail" | "maySubmit">>;
+type Patch = Partial<Pick<Vacancy, "status" | "note" | "applyUrl" | "contact" | "maySubmit">>;
 
 const INITIAL: State = { vacancies: [], statuses: [], loading: true, error: null };
 
@@ -91,8 +91,8 @@ export const useVacancies = () => {
             return;
         }
 
-        if (patch.cvEmail !== undefined) {
-            saveCvEmail(url, next.cvEmail).catch(failed("cannot save the CV email"));
+        if (patch.contact !== undefined) {
+            saveContact(url, next.contact).catch(failed("cannot save the contact"));
             return;
         }
 

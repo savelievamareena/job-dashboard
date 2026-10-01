@@ -56,19 +56,23 @@ public class VacancyService {
         return value;
     }
 
-    /** Stores the CV email address; blank clears it, anything not an address is refused. */
-    public String updateCvEmail(String url, String cvEmail) {
-        String value = cvEmail == null ? "" : cvEmail.strip();
-        if (!value.isEmpty() && !value.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
-            throw new InvalidCvEmailException(value);
+    /** Stores the contact; blank clears it, anything but a link or an address is refused. */
+    public String updateContact(String url, String contact) {
+        String value = contact == null ? "" : contact.strip();
+        if (!value.isEmpty() && !isHttpUrl(value) && !isEmail(value)) {
+            throw new InvalidContactException(value);
         }
-        vacancies.saveCvEmail(url, value);
+        vacancies.saveContact(url, value);
         return value;
     }
 
     public boolean updateMaySubmit(String url, boolean maySubmit) {
         vacancies.saveMaySubmit(url, maySubmit);
         return maySubmit;
+    }
+
+    private static boolean isEmail(String value) {
+        return value.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
     }
 
     private static boolean isHttpUrl(String value) {
@@ -80,10 +84,10 @@ public class VacancyService {
         }
     }
 
-    /** What arrived in the CV email box was not an email address. */
-    public static class InvalidCvEmailException extends RuntimeException {
-        public InvalidCvEmailException(String value) {
-            super("not an email address: " + value);
+    /** What arrived in the contact box was neither a link nor an email address. */
+    public static class InvalidContactException extends RuntimeException {
+        public InvalidContactException(String value) {
+            super("not a link or an email address: " + value);
         }
     }
 
