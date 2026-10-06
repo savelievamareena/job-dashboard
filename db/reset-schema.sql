@@ -162,10 +162,12 @@ create index vacancy_layer_idx on vacancy (found_date, layer) where layer is not
 create index vacancy_ai_idx on vacancy (found_date, ai_kind) where ai_kind is not null;
 
 -- Java or Node with layer backend/back-ops is track backend, with any other layer fullstack; both
--- use the Fullstack CV. Other tracks are left alone. See alter-2026-10-06-backend-track.sql.
-create or replace function vacancy_backend_track() returns trigger language plpgsql as $$
+-- use the Fullstack CV. Layer mobile is never one of her tracks. See alter-2026-10-06-*.sql.
+create or replace function vacancy_track_by_layer() returns trigger language plpgsql as $$
 begin
-    if new.track = 'fullstack' and new.layer in ('backend', 'back-ops') then
+    if new.layer = 'mobile' and new.track in ('frontend', 'fullstack', 'backend') then
+        new.track := 'other-stacks';
+    elsif new.track = 'fullstack' and new.layer in ('backend', 'back-ops') then
         new.track := 'backend';
     elsif new.track = 'backend' and new.layer in ('frontend', 'fullstack') then
         new.track := 'fullstack';
@@ -173,9 +175,9 @@ begin
     return new;
 end $$;
 
-create trigger vacancy_backend_track
+create trigger vacancy_track_by_layer
     before insert or update of track, layer on vacancy
-    for each row execute function vacancy_backend_track();
+    for each row execute function vacancy_track_by_layer();
 
 -- A posting can need more than one language - her Fullstack core is React AND Java, so a real
 -- fullstack posting is both at once, not a choice between them. many-to-many rather than a
@@ -273,13 +275,15 @@ create index cv_queue_company_idx on cv_queue (core, lower(company));
 -- (java, javascript) counts once in EACH series instead of once in whichever single word used
 -- to sit in the old scalar column. See alter-2026-08-25-multi-language-per-vacancy.sql.
 -- `country` (2026-09-05) is carried, not filtered: the page picks one market at a time.
+-- LinkedIn only, her rule; a fresh LinkedIn row has an empty source until something stamps it.
 create view trend_language as
 select coalesce(v.posted_at::date, v.found_date) as day, v.country, l.name as series,
        count(*)::int as count
 from job_languages jl
 join vacancy v on v.job_id = jl.job_id
 join languages l on l.id = jl.language_id
-where l.name not in ('ruby', 'php')
+where (v.source = 'linkedin' or (v.source = '' and v.url ~* '^https?://([a-z0-9-]+\.)?linkedin\.com/'))
+  and l.name not in ('ruby', 'php')
 group by 1, 2, 3
 order by 1, 3;
 
@@ -297,7 +301,8 @@ create view trend_layer as
 select coalesce(posted_at::date, found_date) as day, country, layer as series,
        count(*)::int as count
 from vacancy
-where layer in ('frontend', 'backend', 'fullstack', 'devops', 'back-ops')
+where (source = 'linkedin' or (source = '' and url ~* '^https?://([a-z0-9-]+\.)?linkedin\.com/'))
+  and layer in ('frontend', 'backend', 'fullstack', 'devops', 'back-ops')
 group by 1, 2, 3
 order by 1, 3;
 
@@ -307,7 +312,8 @@ create view trend_ai as
 select coalesce(posted_at::date, found_date) as day, country, ai_kind as series,
        count(*)::int as count
 from vacancy
-where ai_kind is not null
+where (source = 'linkedin' or (source = '' and url ~* '^https?://([a-z0-9-]+\.)?linkedin\.com/'))
+  and ai_kind is not null
 group by 1, 2, 3
 order by 1, 3;
 
