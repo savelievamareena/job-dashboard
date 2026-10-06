@@ -9,6 +9,9 @@ public record CvChoices(Map<String, Queue> byCore) {
 
     public static final CvChoices EMPTY = new CvChoices(Map.of());
 
+    /** A track answered by another track's core: backend postings get the Fullstack CV. */
+    private static final Map<String, String> CORE_OF_TRACK = Map.of("backend", "fullstack");
+
     /** One core's queue: the CV per posting URL, plus rows that name no URL keyed by company. */
     public record Queue(Map<String, CvKind> byUrl, Map<String, CvKind> byCompany) {
 
@@ -32,7 +35,7 @@ public record CvChoices(Map<String, Queue> byCore) {
      * The CV built for this posting, or null; a track names its core, unsorted takes any core.
      */
     public CvKind find(String track, String url, String company) {
-        Queue ownCore = byCore.get(key(track));
+        Queue ownCore = byCore.get(CORE_OF_TRACK.getOrDefault(key(track), key(track)));
         if (ownCore != null) {
             return ownCore.find(url, company);
         }

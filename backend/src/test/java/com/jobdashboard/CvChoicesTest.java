@@ -67,6 +67,16 @@ class CvChoicesTest {
     }
 
     @Test
+    void answersABackendPostingFromTheFullstackCore() {
+        CvChoices choices = new CvChoices(Map.of(
+                "frontend", queue().company("Regnology", CvKind.BASE).build(),
+                "fullstack", queue().url(CLICKUP, CvKind.TAILORED).build()));
+
+        assertThat(choices.find("backend", CLICKUP, "Regnology")).isEqualTo(CvKind.TAILORED);
+        assertThat(choices.find("backend", "", "Regnology")).isNull();
+    }
+
+    @Test
     void answersATrackWithoutACoreFromWhicheverCoreKnowsThePosting() {
         CvChoices choices = choices(queue().url(CLICKUP, CvKind.TAILORED));
 

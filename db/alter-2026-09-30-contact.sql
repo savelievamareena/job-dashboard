@@ -19,7 +19,7 @@ do $$
 begin
     if exists (select 1 from information_schema.columns
                where table_name = 'vacancy' and column_name = 'cv_email') then
-        alter table vacancy rename column cv_email to contact;
+        alter table vacancy rename column   cv_email to contact;
     end if;
 end $$;
 

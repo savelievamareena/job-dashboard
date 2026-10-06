@@ -96,7 +96,7 @@ create table vacancy (
     url         text not null,
     company     text,
     title       text,                -- selected.csv or the description cache, else null
-    track       text,                -- frontend / fullstack / other-stacks / AI / NULL when undetermined (2026-09-01; was NOT NULL with the sentinel 'unsorted')
+    track       text,                -- frontend / fullstack / backend / other-stacks / AI / NULL when undetermined (2026-09-01; was NOT NULL with the sentinel 'unsorted')
 
     -- Languages live in job_languages (see below) - one row per language, first one
     -- primary. No scalar column: dropped 2026-09-01 (her call) after the link table had
@@ -160,6 +160,22 @@ create index vacancy_board_idx
     where is_selected;
 create index vacancy_layer_idx on vacancy (found_date, layer) where layer is not null;
 create index vacancy_ai_idx on vacancy (found_date, ai_kind) where ai_kind is not null;
+
+-- Java or Node with layer backend/back-ops is track backend, with any other layer fullstack; both
+-- use the Fullstack CV. Other tracks are left alone. See alter-2026-10-06-backend-track.sql.
+create or replace function vacancy_backend_track() returns trigger language plpgsql as $$
+begin
+    if new.track = 'fullstack' and new.layer in ('backend', 'back-ops') then
+        new.track := 'backend';
+    elsif new.track = 'backend' and new.layer in ('frontend', 'fullstack') then
+        new.track := 'fullstack';
+    end if;
+    return new;
+end $$;
+
+create trigger vacancy_backend_track
+    before insert or update of track, layer on vacancy
+    for each row execute function vacancy_backend_track();
 
 -- A posting can need more than one language - her Fullstack core is React AND Java, so a real
 -- fullstack posting is both at once, not a choice between them. many-to-many rather than a
