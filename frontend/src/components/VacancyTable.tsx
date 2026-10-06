@@ -16,7 +16,7 @@ type Props = {
 /** A posting with one of these is out of play: rejected, or gone from LinkedIn entirely. */
 const INACTIVE = new Set(["not a fit", "closed"]);
 
-const COLUMNS: { key: SortKey; label: string }[] = [
+const COLUMNS: { key: SortKey | "note"; label: string }[] = [
     { key: "date", label: "Date" },
     { key: "company", label: "Company" },
     { key: "title", label: "Job title" },
@@ -28,13 +28,15 @@ const COLUMNS: { key: SortKey; label: string }[] = [
     { key: "cv", label: "CV" },
     { key: "maySubmit", label: "May submit" },
     { key: "status", label: "Status" },
+    { key: "note", label: "Note" },
     { key: "applyUrl", label: "Apply link" },
     { key: "contact", label: "Contact" },
 ];
 
 const TRACK_LETTER: Record<string, string> = {
-    frontend: "F",
-    fullstack: "B",
+    frontend: "FR",
+    fullstack: "FS",
+    backend: "B",
     "other-stacks": "O",
 };
 
@@ -166,24 +168,28 @@ export const VacancyTable = ({
     <table>
         <thead>
             <tr>
-                {COLUMNS.map(({ key, label }) => (
-                    <th
-                        key={key}
-                        className={key}
-                        onClick={() => onSort(key)}
-                        aria-sort={
-                            sortKey === key
-                                ? sortDir === 1
-                                    ? "ascending"
-                                    : "descending"
-                                : "none"
-                        }
-                    >
-                        {label}
-                        {sortKey === key && <span className="arrow">{sortDir === 1 ? "^" : "v"}</span>}
-                    </th>
-                ))}
-                <th>Note</th>
+                {COLUMNS.map(({ key, label }) =>
+                    key === "note" ? (
+                        <th key={key}>{label}</th>
+                    ) : (
+                        <th
+                            key={key}
+                            hidden={key === "applyUrl"}
+                            className={key}
+                            onClick={() => onSort(key)}
+                            aria-sort={
+                                sortKey === key
+                                    ? sortDir === 1
+                                        ? "ascending"
+                                        : "descending"
+                                    : "none"
+                            }
+                        >
+                            {label}
+                            {sortKey === key && <span className="arrow">{sortDir === 1 ? "^" : "v"}</span>}
+                        </th>
+                    ),
+                )}
             </tr>
         </thead>
         <tbody>
@@ -244,6 +250,15 @@ export const VacancyTable = ({
                         </select>
                     </td>
                     <td>
+                        <DebouncedInput
+                            className="note"
+                            ariaLabel={`Note for ${vacancy.company}`}
+                            placeholder="..."
+                            value={vacancy.note}
+                            onCommit={(note) => onUpdate(vacancy.url, { note })}
+                        />
+                    </td>
+                    <td hidden>
                         <ApplyLinkCell
                             applyUrl={vacancy.applyUrl}
                             company={vacancy.company}
@@ -255,15 +270,6 @@ export const VacancyTable = ({
                             contact={vacancy.contact}
                             company={vacancy.company}
                             onCommit={(contact) => onUpdate(vacancy.url, { contact })}
-                        />
-                    </td>
-                    <td>
-                        <DebouncedInput
-                            className="note"
-                            ariaLabel={`Note for ${vacancy.company}`}
-                            placeholder="..."
-                            value={vacancy.note}
-                            onCommit={(note) => onUpdate(vacancy.url, { note })}
                         />
                     </td>
                 </tr>
