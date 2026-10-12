@@ -44,6 +44,12 @@ const initial = (value: string) => value.slice(0, 1).toUpperCase();
 
 const trackLetter = (track: string) => TRACK_LETTER[track] ?? initial(track);
 
+const COUNTRY_LETTER: Record<string, string> = {
+    uk: "GB",
+};
+
+const countryLetter = (country: string) => COUNTRY_LETTER[country] ?? initial(country);
+
 const ApplyRoute = ({ easyApply }: { easyApply: boolean | null }) => {
     if (easyApply === null) {
         return <span className="tag unknown">?</span>;
@@ -219,7 +225,7 @@ export const VacancyTable = ({
                     <td>{vacancy.level}</td>
                     <td className="source">{vacancy.source}</td>
                     <td className="country" title={vacancy.country}>
-                        {initial(vacancy.country)}
+                        {countryLetter(vacancy.country)}
                     </td>
                     <td>
                         <CvChoice cv={vacancy.cv} />
