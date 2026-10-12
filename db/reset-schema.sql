@@ -107,7 +107,7 @@ create table vacancy (
     posted_at   timestamp,           -- when the posting went up
     found_date  date not null,       -- the day it was first seen
 
-    -- 'poland' / 'germany' / 'uk' / 'netherlands', the market the run was scanning. No default:
+    -- 'poland' / 'germany' / 'uk' / 'netherlands' / 'ireland', the market the run was scanning. No default:
     -- an old day folder says nothing about its country, and a default would make that silence
     -- read as poland.
     country     text,
