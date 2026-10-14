@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { EMPTY_FILTERS, type Filters } from "@/types";
+import type { Filters } from "@/types";
 
 const KEY = "job-dashboard.filters";
 
 /** Keeps only the keys the board knows: a stale or hand-edited entry must not filter by junk. */
-const clean = (saved: unknown): Filters => {
+const clean = (saved: unknown): Filters | null => {
     if (!saved || typeof saved !== "object") {
-        return EMPTY_FILTERS;
+        return null;
     }
 
     const raw = saved as Record<string, unknown>;
@@ -23,13 +23,13 @@ const clean = (saved: unknown): Filters => {
     };
 };
 
-const read = (): Filters => {
+const read = (): Filters | null => {
     try {
         const raw = localStorage.getItem(KEY);
-        return raw ? clean(JSON.parse(raw)) : EMPTY_FILTERS;
+        return raw ? clean(JSON.parse(raw)) : null;
     } catch {
         // Broken entry, or storage blocked in private mode: start clean instead of breaking the board.
-        return EMPTY_FILTERS;
+        return null;
     }
 };
 
@@ -37,16 +37,20 @@ const read = (): Filters => {
  * The filters survive a reload: the board is a working list reopened many times a day, and picking
  * the same date and stack again on every visit is the one thing that makes it feel disposable.
  */
-export const useStoredFilters = () => {
-    const [filters, setFilters] = useState<Filters>(read);
+export const useStoredFilters = (defaults: Filters) => {
+    const [stored, setStored] = useState<Filters | null>(read);
 
     useEffect(() => {
+        if (!stored) {
+            return;
+        }
+
         try {
-            localStorage.setItem(KEY, JSON.stringify(filters));
+            localStorage.setItem(KEY, JSON.stringify(stored));
         } catch {
             // Storage is unavailable: the filters simply stay for this session only.
         }
-    }, [filters]);
+    }, [stored]);
 
-    return [filters, setFilters] as const;
+    return [stored ?? defaults, setStored] as const;
 };

@@ -3,7 +3,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { VacancyTable } from "@/components/VacancyTable";
 import { useStoredFilters } from "@/hooks/useStoredFilters";
 import { useVacancies } from "@/hooks/useVacancies";
-import { NO_STATUS, type Filters, type SortKey, type Vacancy } from "@/types";
+import { EMPTY_FILTERS, NO_STATUS, type Filters, type SortKey, type Vacancy } from "@/types";
 
 const matches = (vacancy: Vacancy, filters: Filters) => {
     const haystack = `${vacancy.company} ${vacancy.title}`.toLowerCase();
@@ -29,7 +29,14 @@ const compare = (a: Vacancy, b: Vacancy, key: SortKey) => {
 
 export const App = () => {
     const { vacancies, statuses, loading, error, update } = useVacancies();
-    const [filters, setFilters] = useStoredFilters();
+    const defaults = useMemo<Filters>(
+        () => ({
+            ...EMPTY_FILTERS,
+            date: vacancies.reduce((latest, { date }) => (date > latest ? date : latest), ""),
+        }),
+        [vacancies],
+    );
+    const [filters, setFilters] = useStoredFilters(defaults);
     const [sortKey, setSortKey] = useState<SortKey>("date");
     const [sortDir, setSortDir] = useState<1 | -1>(-1);
 
@@ -58,6 +65,7 @@ export const App = () => {
                 <>
                     <FilterBar
                         filters={filters}
+                        defaults={defaults}
                         onChange={setFilters}
                         vacancies={vacancies}
                         statuses={statuses}

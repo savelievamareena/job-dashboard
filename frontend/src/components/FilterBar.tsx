@@ -1,7 +1,8 @@
-import { EMPTY_FILTERS, NO_STATUS, type Filters, type Vacancy } from "@/types";
+import { NO_STATUS, type Filters, type Vacancy } from "@/types";
 
 type Props = {
     filters: Filters;
+    defaults: Filters;
     onChange: (filters: Filters) => void;
     vacancies: Vacancy[];
     statuses: string[];
@@ -30,11 +31,13 @@ const tracks = (vacancies: Vacancy[], selected: string) =>
         selected,
     ).sort();
 
-export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Props) => {
+export const FilterBar = ({ filters, defaults, onChange, vacancies, statuses, shown }: Props) => {
     const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
         onChange({ ...filters, [key]: value });
 
-    const filtered = Object.values(filters).some(Boolean);
+    const filtered = (Object.keys(defaults) as (keyof Filters)[]).some(
+        (key) => filters[key] !== defaults[key],
+    );
 
     return (
         <div className="bar">
@@ -126,7 +129,7 @@ export const FilterBar = ({ filters, onChange, vacancies, statuses, shown }: Pro
             <button
                 type="button"
                 className="clear"
-                onClick={() => onChange(EMPTY_FILTERS)}
+                onClick={() => onChange(defaults)}
                 disabled={!filtered}
             >
                 clear filters
