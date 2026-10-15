@@ -11,6 +11,11 @@ export type Vacancy = {
     /** null when the cached record predates the flag: unknown, which is not the same as "no". */
     easyApply: boolean | null;
     /**
+     * true for a product company, false for outsourcing, consultancy, agency or staffing. null
+     * while /classify-jobs has not read the description or the text does not say.
+     */
+    isProduct: boolean | null;
+    /**
      * Where the Apply button leads outside LinkedIn. Empty means nobody has filled it in yet, not
      * "there is no link". It used to come only from a paid lookup; that provider stopped answering
      * on 2026-08-13, so the board is now where it gets typed in by hand.

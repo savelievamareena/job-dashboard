@@ -6,6 +6,7 @@
     --easy-line: #1a7f3788;
     --cv-bg: #5b4bd622;
     --cv-line: #5b4bd688;
+    --product-row: #14532d;
     --error: #c0392b;
 }
 
@@ -196,6 +197,12 @@ a {
 
 tr.done {
     opacity: 0.45;
+}
+
+/* Dark green under light text in both colour schemes, so the row reads the same either way. */
+tr.product {
+    background: var(--product-row);
+    color: #fff;
 }
 
 .empty {

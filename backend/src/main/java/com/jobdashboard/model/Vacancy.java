@@ -11,6 +11,7 @@ public record Vacancy(
         String url,
         String stack,
         Boolean easyApply,
+        Boolean isProduct,
         String applyUrl,
         String contact,
         boolean maySubmit,
@@ -27,14 +28,14 @@ public record Vacancy(
     /** Returns a copy carrying the status and note the dashboard has stored for this posting. */
     public Vacancy withStatus(JobStatus jobStatus) {
         return new Vacancy(date, source, country, track, company, title, url, stack, easyApply,
-                applyUrl, contact, maySubmit, level, jobType, location, applicants, gap, hasText,
-                cv, jobStatus.status(), jobStatus.note());
+                isProduct, applyUrl, contact, maySubmit, level, jobType, location, applicants, gap,
+                hasText, cv, jobStatus.status(), jobStatus.note());
     }
 
     /** Returns a copy carrying the CV built for this company, null while none has been. */
     public Vacancy withCv(CvKind kind) {
         return new Vacancy(date, source, country, track, company, title, url, stack, easyApply,
-                applyUrl, contact, maySubmit, level, jobType, location, applicants, gap, hasText,
-                kind, status, note);
+                isProduct, applyUrl, contact, maySubmit, level, jobType, location, applicants, gap,
+                hasText, kind, status, note);
     }
 }

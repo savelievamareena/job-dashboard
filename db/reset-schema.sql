@@ -141,6 +141,10 @@ create table vacancy (
     -- the company's LinkedIn page by /cv-automation, or typed in by hand. See
     -- alter-2026-09-30-contact.sql.
     contact     text,
+    -- true for a product company, false for outsourcing, consultancy, agency or staffing, null
+    -- while the description has not said. Written by /classify-jobs, never by the loader. See
+    -- alter-2026-10-15-is-product.sql.
+    is_product  boolean,
     may_submit  boolean not null default false,
     level       text not null default '',
     job_type    text not null default '',

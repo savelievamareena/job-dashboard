@@ -62,6 +62,11 @@ const ApplyRoute = ({ easyApply }: { easyApply: boolean | null }) => {
     );
 };
 
+const rowClass = (vacancy: Vacancy) =>
+    [INACTIVE.has(vacancy.status) ? "done" : "", vacancy.isProduct ? "product" : ""]
+        .filter(Boolean)
+        .join(" ");
+
 /** A malformed address is shown as it stands: worth seeing, not worth failing the row over. */
 const host = (url: string) => {
     try {
@@ -203,7 +208,7 @@ export const VacancyTable = ({
                 /* The url alone is not unique: one posting can appear under two dates or tracks. */
                 <tr
                     key={`${vacancy.date}|${vacancy.source}|${vacancy.track}|${vacancy.url}`}
-                    className={INACTIVE.has(vacancy.status) ? "done" : ""}
+                    className={rowClass(vacancy)}
                 >
                     <td className="date">{vacancy.date}</td>
                     <td className="company" title={vacancy.company}>

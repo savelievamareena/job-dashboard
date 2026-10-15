@@ -17,15 +17,16 @@ public class JdbcVacancyRepository implements VacancyRepository {
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, country, track, company, title, url,
-                   easy_apply, apply_url, contact, may_submit, level, job_type, location,
-                   applicants, gap, has_text
+                   easy_apply, is_product, apply_url, contact, may_submit, level, job_type,
+                   location, applicants, gap, has_text
             from vacancy
             where is_selected
               and coalesce(title, '') <> ''
             order by coalesce(posted_at::date, selected_date, found_date) desc, lower(company)
             """;
 
-    /** getObject keeps a missing easy_apply apart from a known "no"; other nulls become "". */
+    /** getObject keeps a missing easy_apply or is_product apart from a known "no"; other nulls
+     *  become "". */
     private static final RowMapper<Vacancy> VACANCY = (rs, row) -> new Vacancy(
             rs.getString("date"),
             text(rs.getString("source")),
@@ -36,6 +37,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
             text(rs.getString("url")),
             "",
             rs.getObject("easy_apply", Boolean.class),
+            rs.getObject("is_product", Boolean.class),
             text(rs.getString("apply_url")),
             text(rs.getString("contact")),
             rs.getBoolean("may_submit"),
