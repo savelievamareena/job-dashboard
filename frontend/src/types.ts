@@ -8,6 +8,11 @@ export type Vacancy = {
     title: string;
     url: string;
     stack: string;
+    /**
+     * Server languages from job_languages, comma-separated; javascript there shows as "node".
+     * Empty when the posting names none: client languages are left out.
+     */
+    language: string;
     /** null when the cached record predates the flag: unknown, which is not the same as "no". */
     easyApply: boolean | null;
     /**
@@ -51,6 +56,7 @@ export type SortKey =
     | "company"
     | "title"
     | "track"
+    | "language"
     | "easyApply"
     | "level"
     | "source"

@@ -116,6 +116,8 @@ td.date {
 
 th.track,
 td.track,
+th.language,
+td.language,
 th.country,
 td.country {
     width: 1%;

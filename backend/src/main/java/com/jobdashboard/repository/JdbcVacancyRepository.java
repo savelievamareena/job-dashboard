@@ -13,10 +13,23 @@ public class JdbcVacancyRepository implements VacancyRepository {
     /** Dated by posted_at, then the pick day, then found_date; stack only repeated the track.
      *  A selected posting with no title renders as a bare "open the posting" link - nothing to
      *  screen and nothing to apply to - so it stays off the list (her call, 2026-09-01, after the
-     *  portal-scan ghosts that reached selection through the old unsorted leak). */
+     *  portal-scan ghosts that reached selection through the old unsorted leak).
+     *  language is the server side only: javascript counts as Node on a backend layer, or on a
+     *  fullstack one whose text names Node; otherwise it, swift and dart are the client. */
     private static final String SELECTED = """
             select coalesce(posted_at::date, selected_date, found_date) as date,
                    source, country, track, company, title, url,
+                   (select string_agg(case when l.name = 'javascript' then 'node' else l.name end,
+                                      ', ' order by jl.is_primary desc, l.name)
+                    from job_languages jl
+                    join languages l on l.id = jl.language_id
+                    where jl.job_id = vacancy.job_id
+                      and (l.name not in ('javascript', 'swift', 'dart')
+                           or l.name = 'javascript'
+                              and (layer in ('backend', 'back-ops')
+                                   or layer = 'fullstack'
+                                      and description ~* '\\mnode\\M|\\mnodejs\\M|\\mnestjs\\M')))
+                       as language,
                    easy_apply, is_product, apply_url, contact, may_submit, level, job_type,
                    location, applicants, gap, has_text
             from vacancy
@@ -36,6 +49,7 @@ public class JdbcVacancyRepository implements VacancyRepository {
             text(rs.getString("title")),
             text(rs.getString("url")),
             "",
+            text(rs.getString("language")),
             rs.getObject("easy_apply", Boolean.class),
             rs.getObject("is_product", Boolean.class),
             text(rs.getString("apply_url")),

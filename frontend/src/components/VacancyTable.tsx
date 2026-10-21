@@ -21,6 +21,7 @@ const COLUMNS: { key: SortKey | "note"; label: string }[] = [
     { key: "company", label: "Company" },
     { key: "title", label: "Job title" },
     { key: "track", label: "Stack" },
+    { key: "language", label: "Language" },
     { key: "easyApply", label: "Apply" },
     { key: "level", label: "Level" },
     { key: "source", label: "Source" },
@@ -224,6 +225,7 @@ export const VacancyTable = ({
                     <td className="track" title={vacancy.track}>
                         {trackLetter(vacancy.track)}
                     </td>
+                    <td className="language">{vacancy.language}</td>
                     <td>
                         <ApplyRoute easyApply={vacancy.easyApply} />
                     </td>
