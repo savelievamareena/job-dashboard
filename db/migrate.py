@@ -45,7 +45,7 @@ DOMAIN_SOURCES = {"linkedin.com": "linkedin", "justjoin.it": "jjit", "nofluffjob
 # was picked. What it stops is a selection run in a track no CV answers, which would put a posting
 # on the board that the tailoring step cannot act on. /select-jobs no longer offers those tracks.
 BOARD_TRACKS = ["frontend", "fullstack"]
-CV_ROOT = "cv-tailored/Poland"
+CV_ROOT = "cv-tailored"
 CV_CORES = ["Frontend", "Fullstack"]
 
 DATE_FOLDER = re.compile(r"\d{4}-\d{2}-\d{2}")

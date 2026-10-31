@@ -121,7 +121,7 @@ The `CV` column answers what goes out for that company. It comes from the queue 
 appends to, one per core, which the loader imports into `cv_queue`:
 
 ```
-<root>/cv-tailored/Poland/<core>/review-queue.csv     company,url,pdf_path,built,verdict
+<root>/cv-tailored/<core>/review-queue.csv     company,url,pdf_path,built,verdict
 ```
 
 The list of cores is configured in `application.yml` and must stay there. Reading it back out of
