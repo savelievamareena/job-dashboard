@@ -11,6 +11,7 @@ export const COUNTRIES: { key: Country; label: string }[] = [
     { key: "uk", label: "британия" },
     { key: "netherlands", label: "нидерланды" },
     { key: "ireland", label: "ирландия" },
+    { key: "austria", label: "австрия" },
 ];
 
 type Props = {

@@ -104,7 +104,7 @@ export type TrendPoint = {
 };
 
 /** The markets /find-jobs can scan, spelled as vacancy.country stores them. */
-export type Country = "poland" | "germany" | "uk" | "netherlands" | "ireland";
+export type Country = "poland" | "germany" | "uk" | "netherlands" | "ireland" | "austria";
 
 /** A day a search ran, and where. One run scans one country. */
 export type ScanDay = { day: string; country: string };
