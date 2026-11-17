@@ -34,11 +34,12 @@ const read = (): Filters | null => {
 };
 
 /**
- * The filters survive a reload: the board is a working list reopened many times a day, and picking
- * the same date and stack again on every visit is the one thing that makes it feel disposable.
+ * The filters except the date survive a reload: the board is a working list reopened many times a day, and picking
+ * the same stack again on every visit is the one thing that makes it feel disposable.
  */
 export const useStoredFilters = (defaults: Filters) => {
     const [stored, setStored] = useState<Filters | null>(read);
+    const [date, setDate] = useState<string | null>(null);
 
     useEffect(() => {
         if (!stored) {
@@ -52,5 +53,10 @@ export const useStoredFilters = (defaults: Filters) => {
         }
     }, [stored]);
 
-    return [stored ?? defaults, setStored] as const;
+    const change = (filters: Filters) => {
+        setStored(filters);
+        setDate(filters.date);
+    };
+
+    return [{ ...(stored ?? defaults), date: date ?? defaults.date }, change] as const;
 };
